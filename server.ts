@@ -642,7 +642,7 @@ async function startServer() {
 
   // Student Login / Register
   app.post("/api/auth/student-login", async (req, res) => {
-    const { email, name, lastName, phone, country, age, gender, currentEducation, academicGoal, city, targetCity, currentCountry, level, isOnlyLogin, referredBy } = req.body;
+    const { email, name, lastName, phone, country, age, gender, currentEducation, academicGoal, city, targetCity, currentCountry, level, isOnlyLogin, referredBy, password } = req.body;
     if (!email) return res.status(400).json({ error: "El correo electrónico es requerido." });
 
     const clientIP = ((req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "127.0.0.1").split(",")[0].trim();
@@ -659,10 +659,15 @@ async function startServer() {
         if (student.isBlocked) return res.status(403).json({ success: false, error: "SU ACCESO HA SIDO TEMPORALMENTE RESTRINGIDO." });
         if (subscriptionBlocked) return res.status(403).json({ success: false, error: "PLATAFORMA BLOQUEADA por el administrador." });
         if (!isOnlyLogin) return res.status(400).json({ success: false, error: "Ya dispones de un perfil con este correo. Ve a 'Iniciar Sesión'." });
+        // Verify password if student has one set
+        if (student.password && password !== student.password) {
+          return res.status(401).json({ success: false, error: "Contraseña incorrecta. Inténtalo de nuevo." });
+        }
       } else {
         if (subscriptionBlocked) return res.status(403).json({ success: false, error: "PLATAFORMA BLOQUEADA." });
         if (isOnlyLogin) return res.status(404).json({ success: false, error: "Correo no registrado. Selecciona 'Crear Cuenta'." });
         if (!email.includes("@")) return res.status(404).json({ success: false, error: "ID no encontrado." });
+        if (!password || password.length < 6) return res.status(400).json({ success: false, error: "La contraseña debe tener al menos 6 caracteres." });
 
         const allStudents = await getStudents();
         const userLimit = (await getConfig("subscriptionUserLimit")) ?? 1000;
@@ -679,6 +684,7 @@ async function startServer() {
           lastName: lastName || "",
           phone: phone || "",
           email: email.toLowerCase(),
+          password: password || "",
           country: country || "Morocco",
           city: city || "Rabat",
           targetCity: targetCity || "Madrid",

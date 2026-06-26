@@ -163,6 +163,7 @@ export default function App() {
   const [studentLastNameInput, setStudentLastNameInput] = useState("");
   const [studentPhoneInput, setStudentPhoneInput] = useState("");
   const [studentEmailInput, setStudentEmailInput] = useState("");
+  const [studentPasswordInput, setStudentPasswordInput] = useState("");
   const [studentCountryInput, setStudentCountryInput] = useState("Morocco");
   const [studentGenderInput, setStudentGenderInput] = useState("Femenino");
   const [studentGoalInput, setStudentGoalInput] = useState("FP Grado Superior");
@@ -552,6 +553,7 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: emailClean,
+            password: studentPasswordInput.trim(),
             isOnlyLogin: true
           })
         });
@@ -631,6 +633,7 @@ export default function App() {
             name: studentNameInput.trim(),
             lastName: studentLastNameInput.trim(),
             phone: studentPhoneInput.trim(),
+            password: studentPasswordInput.trim(),
             country: studentCountryInput,
             gender: studentGenderInput,
             academicGoal: studentGoalInput,
@@ -2080,6 +2083,17 @@ export default function App() {
                             required
                           />
                         </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1.5">Contraseña</label>
+                          <input
+                            type="password"
+                            placeholder="Tu contraseña"
+                            value={studentPasswordInput}
+                            onChange={(e) => setStudentPasswordInput(e.target.value)}
+                            className="w-full bg-[#070a13] border border-gray-800 rounded-xl p-3.5 text-xs text-white outline-none focus:border-amber-500 font-serif"
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -2166,6 +2180,18 @@ export default function App() {
                               placeholder="sofia@gmail.com"
                               value={studentEmailInput}
                               onChange={(e) => setStudentEmailInput(e.target.value)}
+                              className="w-full bg-[#070a13] border border-gray-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                              required={studentActionTab === "register"}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Contraseña (mínimo 6 caracteres)</label>
+                            <input
+                              type="password"
+                              placeholder="Crea una contraseña segura"
+                              value={studentPasswordInput}
+                              onChange={(e) => setStudentPasswordInput(e.target.value)}
                               className="w-full bg-[#070a13] border border-gray-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-amber-500 font-mono"
                               required={studentActionTab === "register"}
                             />

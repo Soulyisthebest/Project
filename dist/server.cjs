@@ -79015,7 +79015,7 @@ async function startServer() {
     }
   });
   app.post("/api/auth/student-login", async (req, res) => {
-    const { email, name, lastName, phone, country, age, gender, currentEducation, academicGoal, city, targetCity, currentCountry, level, isOnlyLogin, referredBy } = req.body;
+    const { email, name, lastName, phone, country, age, gender, currentEducation, academicGoal, city, targetCity, currentCountry, level, isOnlyLogin, referredBy, password } = req.body;
     if (!email) return res.status(400).json({ error: "El correo electr\xF3nico es requerido." });
     const clientIP = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1").split(",")[0].trim();
     const existingIP = activeSessions.get(email.toLowerCase());
@@ -79029,10 +79029,14 @@ async function startServer() {
         if (student.isBlocked) return res.status(403).json({ success: false, error: "SU ACCESO HA SIDO TEMPORALMENTE RESTRINGIDO." });
         if (subscriptionBlocked) return res.status(403).json({ success: false, error: "PLATAFORMA BLOQUEADA por el administrador." });
         if (!isOnlyLogin) return res.status(400).json({ success: false, error: "Ya dispones de un perfil con este correo. Ve a 'Iniciar Sesi\xF3n'." });
+        if (student.password && password !== student.password) {
+          return res.status(401).json({ success: false, error: "Contrase\xF1a incorrecta. Int\xE9ntalo de nuevo." });
+        }
       } else {
         if (subscriptionBlocked) return res.status(403).json({ success: false, error: "PLATAFORMA BLOQUEADA." });
         if (isOnlyLogin) return res.status(404).json({ success: false, error: "Correo no registrado. Selecciona 'Crear Cuenta'." });
         if (!email.includes("@")) return res.status(404).json({ success: false, error: "ID no encontrado." });
+        if (!password || password.length < 6) return res.status(400).json({ success: false, error: "La contrase\xF1a debe tener al menos 6 caracteres." });
         const allStudents = await getStudents();
         const userLimit = await getConfig("subscriptionUserLimit") ?? 1e3;
         if (allStudents.length >= userLimit) return res.status(403).json({ success: false, error: `L\xEDmite de ${userLimit} estudiantes alcanzado.` });
@@ -79046,6 +79050,7 @@ async function startServer() {
           lastName: lastName || "",
           phone: phone || "",
           email: email.toLowerCase(),
+          password: password || "",
           country: country || "Morocco",
           city: city || "Rabat",
           targetCity: targetCity || "Madrid",
