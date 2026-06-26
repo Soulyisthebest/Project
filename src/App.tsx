@@ -86,6 +86,45 @@ const AdBanner = ({ section, ads, onRender }: { section: string; ads: any[]; onR
   );
 };
 
+const fallbackPremiumVideos = [
+  {
+    id: "vid_fallback_1",
+    title: "Estrategia de Baremación y Admisión en la FP 2026",
+    description: "Vídeo completo paso a paso: Entiende cómo calculan tu nota media, cómo homologar sin cometer errores habituales y cómo posicionarte como candidato prioritario para asegurar tu plaza en cualquier comunidad autónoma de España.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    pdfUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    price: 19.99
+  },
+  {
+    id: "vid_fallback_2",
+    title: "Estrategia Completa de Homologación de Títulos de Bachillerato",
+    description: "Aprende el procedimiento rápido para legalizar tu título, obtener el volante condicional y acelerar la resolución de tu homologación para no quedar excluido de la matrícula oficial en las universidades públicas españolas.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    pdfUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    price: 14.99
+  }
+];
+
+const renderVideoEmbed = (url: string) => {
+  let embedUrl = url;
+  if (url.includes("youtube.com/watch?v=")) {
+    const videoId = url.split("v=")[1]?.split("&")[0];
+    if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+  } else if (url.includes("youtu.be/")) {
+    const videoId = url.split("youtu.be/")[1]?.split("?")[0];
+    if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+  }
+  return (
+    <iframe
+      src={embedUrl}
+      className="w-full h-full rounded-2xl border-0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+      referrerPolicy="no-referrer"
+    ></iframe>
+  );
+};
+
 export default function App() {
   // --- Portal Gate Access & Real-Time Sync States ---
   const [userRole, setUserRole] = useState<"student" | "admin" | null>(() => {
@@ -146,6 +185,15 @@ export default function App() {
   const customLevelTopics = dbStats?.customData?.levelTopics || LEVEL_TOPICS;
   const [loadingStats, setLoadingStats] = useState(false);
   const [activePortalTab, setActivePortalTab] = useState<"student" | "creator">("student");
+
+  // Premium Videos Purchase States
+  const [payingVideoId, setPayingVideoId] = useState<string | null>(null);
+  const [showSimulatedModal, setShowSimulatedModal] = useState(false);
+  const [checkoutCardName, setCheckoutCardName] = useState("");
+  const [checkoutCardNumber, setCheckoutCardNumber] = useState("");
+  const [checkoutProcessing, setCheckoutProcessing] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutSuccessVideoTitle, setCheckoutSuccessVideoTitle] = useState("");
 
   // --- Persistent Local Profile State ---
   const [profile, setProfile] = useState(() => {
@@ -253,10 +301,112 @@ export default function App() {
   }, [userRole, loggedInEmail]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stripe_success") === "true") {
+      const vidId = params.get("videoId");
+      const currentEmail = loggedInEmail || localStorage.getItem("sp_logged_email");
+      if (vidId && currentEmail) {
+        fetch("/api/stripe/payment-success", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoId: vidId, email: currentEmail })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              fetchStats();
+              // Clean URL parameters
+              window.history.replaceState({}, document.title, window.location.pathname);
+              alert("🎉 ¡Gracias por tu compra! Tu masterclass premium ha sido desbloqueada con éxito de por vida. ¡Disfruta de tu formación!");
+            }
+          })
+          .catch(err => console.error("Error confirmando pago de Stripe:", err));
+      }
+    }
+  }, [loggedInEmail]);
+
+  useEffect(() => {
     if (dbStats && dbStats.communityMessages && dbStats.communityMessages.length > 0) {
       setChats(dbStats.communityMessages);
     }
   }, [dbStats]);
+
+  const handleInitiateVideoPurchase = async (videoId: string) => {
+    if (!loggedInEmail) {
+      alert("Por favor inicia sesión para poder adquirir este video premium.");
+      return;
+    }
+    setPayingVideoId(videoId);
+    setCheckoutError("");
+    setCheckoutProcessing(true);
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoId,
+          email: loggedInEmail,
+          baseUrl: window.location.origin
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Fallo al iniciar el checkout.");
+      }
+
+      if (data.url) {
+        // Redirigir a Stripe Checkout real
+        window.top.location.href = data.url;
+      } else if (data.simulated) {
+        // Abrir pasarela de pago simulada interactiva
+        setCheckoutSuccessVideoTitle(data.title || "Clase Premium");
+        setCheckoutCardName("");
+        setCheckoutCardNumber("");
+        setShowSimulatedModal(true);
+      }
+    } catch (err: any) {
+      alert(`⚠️ Error: ${err.message || "No se pudo conectar con el servidor de pagos."}`);
+    } finally {
+      setCheckoutProcessing(false);
+    }
+  };
+
+  const handleSimulatedSubmitPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkoutCardName || !checkoutCardNumber) {
+      setCheckoutError("Por favor completa todos los campos del formulario.");
+      return;
+    }
+    if (checkoutCardNumber.replace(/\s/g, "").length < 16) {
+      setCheckoutError("El número de tarjeta debe tener 16 dígitos.");
+      return;
+    }
+    setCheckoutProcessing(true);
+    setCheckoutError("");
+    try {
+      const res = await fetch("/api/stripe/payment-success", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoId: payingVideoId,
+          email: loggedInEmail
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShowSimulatedModal(false);
+        setPayingVideoId(null);
+        fetchStats();
+        alert(`🎉 ¡Pago Simulado Exitoso!\nHas adquirido de por vida la clase "${checkoutSuccessVideoTitle}". ¡Ya puedes reproducirla sin límites!`);
+      } else {
+        setCheckoutError(data.error || "Ocurrió un error al procesar tu pago de simulación.");
+      }
+    } catch (err) {
+      setCheckoutError("Fallo de red al enviar confirmación de pago.");
+    } finally {
+      setCheckoutProcessing(false);
+    }
+  };
 
   const syncStudentUpdate = async (updates: any) => {
     if (userRole !== "student" || !loggedStudent) return;
@@ -1506,6 +1656,141 @@ export default function App() {
       console.error("PDF generation failed:", err);
       alert("Error generating PDF Guide. Please try again.");
     }
+  };
+
+  const renderSimulatedPaymentModal = () => {
+    if (!showSimulatedModal) return null;
+    const matchingVideo = ((dbStats?.premiumVideos && dbStats.premiumVideos.length > 0) 
+      ? dbStats.premiumVideos 
+      : fallbackPremiumVideos).find((v: any) => v.id === payingVideoId);
+
+    if (!matchingVideo) return null;
+
+    return (
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+        <div className="relative w-full max-w-md bg-[#090d1a] border-2 border-[#1e2e4b] rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+          {/* Top aesthetic accent */}
+          <div className="h-2 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 animate-pulse" />
+
+          {/* Modal Header */}
+          <div className="p-6 pb-4 border-b border-[#142137] bg-[#070b14] flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">💳</span>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight uppercase font-mono text-left">Pasarela Segura (Simulación)</h3>
+                <p className="text-[10px] text-amber-500/80 uppercase font-mono font-extrabold tracking-wider text-left">Modo de Demostración Activo</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                setShowSimulatedModal(false);
+                setPayingVideoId(null);
+              }}
+              className="text-gray-400 hover:text-white transition text-sm font-bold p-1 hover:bg-[#121c32] rounded-lg cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Modal Body / Card Inputs */}
+          <form onSubmit={handleSimulatedSubmitPayment} className="p-6 space-y-4 text-left">
+            <div className="bg-[#050811] p-4 rounded-2xl border border-[#142137] space-y-1">
+              <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Concepto de la Compra</p>
+              <p className="text-xs font-bold text-white font-sans">{matchingVideo.title}</p>
+              <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-800/80">
+                <span className="text-[11px] text-gray-500">Importe único de por vida:</span>
+                <span className="text-sm font-extrabold text-amber-400 font-mono">€{matchingVideo.price.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {checkoutError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-mono">
+                ⚠️ {checkoutError}
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Titular de la Tarjeta *</label>
+              <input
+                type="text"
+                required
+                placeholder="Nombre completo del titular"
+                value={checkoutCardName}
+                onChange={(e) => setCheckoutCardName(e.target.value)}
+                className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-sans text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Número de Tarjeta de Prueba *</label>
+              <input
+                type="text"
+                required
+                maxLength={19}
+                placeholder="4242 4242 4242 4242"
+                value={checkoutCardNumber}
+                onChange={(e) => {
+                  // Format with spaces
+                  const v = e.target.value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+                  const matches = v.match(/\d{4,16}/g);
+                  const match = (matches && matches[0]) || "";
+                  const parts = [];
+
+                  for (let i = 0, len = match.length; i < len; i += 4) {
+                    parts.push(match.substring(i, i + 4));
+                  }
+
+                  if (parts.length > 0) {
+                    setCheckoutCardNumber(parts.join(" "));
+                  } else {
+                    setCheckoutCardNumber(v);
+                  }
+                }}
+                className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Expiración *</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={5}
+                  placeholder="MM/AA"
+                  className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">CVC *</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={3}
+                  placeholder="123"
+                  className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={checkoutProcessing}
+              className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-55 text-gray-950 font-bold rounded-xl transition cursor-pointer text-center select-none text-xs font-mono tracking-wider"
+            >
+              {checkoutProcessing ? "Procesando pago seguro..." : "🔒 Confirmar Transacción de Simulación"}
+            </button>
+          </form>
+
+          {/* Modal Footer Security Badges */}
+          <div className="p-4 bg-[#070b16] border-t border-[#142137] flex items-center justify-center gap-4 text-[10px] text-gray-500 font-mono">
+            <span>🛡️ Encriptación SSL 256 bits</span>
+            <span>•</span>
+            <span>🔒 Conforme a PCI-DSS</span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderPoliciesModal = () => {
@@ -4319,6 +4604,106 @@ export default function App() {
             </div>
           )}
 
+          {/* TAB 6B: PREMIUM VIDEOS & MASTERCLASSES WITH STRIPE AND SIMULATED DIRECT GATEWAY */}
+          {tab === "videos" && (
+            <div className="bg-[#0c1222] border border-[#1b253b] p-6 rounded-3xl shadow-xl space-y-6">
+              <div className="flex justify-between items-start flex-wrap gap-4 mb-2">
+                <div className="text-left">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                    <span className="text-2xl">🎥</span>
+                    {lang === "ar" ? "الفيديوهات والدروس المصورة المميزة" : "Formaciones y Masterclasses Premium"}
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-1 font-sans">
+                    {lang === "ar" 
+                      ? "دروس مصورة حصرية ومقابلات مع خبراء لتوجيهك في عملية القبول الجامعي والدراسة في إسبانيا." 
+                      : "Clases exclusivas de alta calidad dirigidas por asesores acreditados. Desbloquea acceso ilimitado para siempre."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Masterclass Grid */}
+              {(() => {
+                const videosList = (dbStats?.premiumVideos && dbStats.premiumVideos.length > 0) 
+                  ? dbStats.premiumVideos 
+                  : fallbackPremiumVideos;
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                    {videosList.map((vid: any) => {
+                      const isUnlocked = loggedStudent?.purchasedVideos?.includes(vid.id) || 
+                        loggedStudent?.freeTierExempt || 
+                        loggedStudent?.premiumStatus === "free" ||
+                        vid.price === 0;
+
+                      return (
+                        <div key={vid.id} className="bg-[#070b14] border border-[#1b253b] rounded-3xl overflow-hidden flex flex-col justify-between hover:border-amber-500/30 transition duration-300">
+                          {/* Video Thumbnail / Player area */}
+                          <div className="aspect-video bg-gray-950 relative flex items-center justify-center">
+                            {isUnlocked ? (
+                              <div className="w-full h-full">
+                                {renderVideoEmbed(vid.videoUrl)}
+                              </div>
+                            ) : (
+                              <div className="absolute inset-0 bg-[#070b14]/90 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full text-2xl animate-pulse">
+                                  🔒
+                                </div>
+                                <div className="space-y-1">
+                                  <h4 className="font-bold text-white text-xs uppercase tracking-widest font-mono">Clase Bloqueada</h4>
+                                  <p className="text-[11px] text-gray-500 max-w-xs font-sans">Esta formación requiere pago único de desbloqueo.</p>
+                                </div>
+                                <span className="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-xl text-xs font-mono font-bold">
+                                  €{vid.price.toFixed(2)} Pago Único
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Content Meta */}
+                          <div className="p-5 space-y-4 flex flex-col justify-between flex-1">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-start gap-2">
+                                <h3 className="font-bold text-white text-sm leading-tight font-sans">{vid.title}</h3>
+                                {isUnlocked && (
+                                  <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase shrink-0">
+                                    🔓 Desbloqueado
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400 leading-relaxed font-sans line-clamp-3">{vid.description}</p>
+                            </div>
+
+                            {/* Purchase / Play CTA */}
+                            {!isUnlocked && (
+                              <button
+                                onClick={() => handleInitiateVideoPurchase(vid.id)}
+                                disabled={checkoutProcessing}
+                                className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-55 text-gray-950 font-bold rounded-2xl transition cursor-pointer text-center select-none text-xs font-sans"
+                              >
+                                {checkoutProcessing ? "Cargando..." : `💳 Desbloquear por €${vid.price.toFixed(2)} (Acceso de por vida)`}
+                              </button>
+                            )}
+
+                            {isUnlocked && vid.pdfUrl && (
+                              <a
+                                href={vid.pdfUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full py-2.5 bg-red-600/15 hover:bg-red-600/30 text-red-400 hover:text-red-300 font-bold rounded-2xl border border-red-500/20 transition text-center block text-xs font-sans flex items-center justify-center gap-2"
+                              >
+                                <span>📄</span> {lang === "ar" ? "تحميل ملف الـ PDF المرفق" : "Descargar Guía / PDF de la Clase"}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* TAB 7: EXTRA - STUDENT LIFE COMPENDIUM */}
           {tab === "vie" && (
             <div className="bg-[#0c1222] border border-[#1b253b] p-6 rounded-3xl shadow-xl space-y-6">
@@ -5426,6 +5811,7 @@ export default function App() {
       })()}
 
       {renderPoliciesModal()}
+      {renderSimulatedPaymentModal()}
     </div>
   );
 }

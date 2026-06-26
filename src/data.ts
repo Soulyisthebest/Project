@@ -26,6 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: 'transport', icon: '🚇', en: 'Transport Cards', ar: 'بطاقات النقل', fr: 'Cartes Transport', es: 'Tarjetas Transporte' },
   { key: 'logement', icon: '🏠', en: 'Housing', ar: 'السكن الطلابي', fr: 'Logement', es: 'Alojamiento' },
   { key: 'ebook', icon: '📚', en: 'Spanish Course A1→C2', ar: 'دورة الإسبانية A1→C2', fr: 'Cours Espagnol A1→C2', es: 'Curso Español A1→C2' },
+  { key: 'videos', icon: '🎥', en: 'Premium Videos', ar: 'الفيديوهات المميزة', fr: 'Vidéos Premium', es: 'Clases Premium' },
   { key: 'vie', icon: '🏪', en: 'Student Life', ar: 'الحياة الطلابية', fr: 'Vie Étudiante', es: 'Vida Estudiantil' },
   { key: 'emploi', icon: '💼', en: 'Employment', ar: 'العمل بعد الدراسة', fr: 'Emploi', es: 'Empleo' },
   { key: 'chat', icon: '💬', en: 'Community', ar: 'المجتمع', fr: 'Communauté', es: 'Comunidad' },

@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import pg from "pg";
 import { getFallbackLessonData } from "./src/fallbackLessons";
 import { getFallbackExam } from "./src/fallbackExams";
+import Stripe from "stripe";
 
 dotenv.config();
 
@@ -585,15 +586,24 @@ async function startServer() {
 
       // Filter students if not admin
       let students = studentsRaw;
+      const premiumVideos = await getCustomData("premium_videos") || [];
+      
       if (!isReqAdmin) {
-        students = studentsRaw.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          xp: s.xp || 0,
-          level: s.level || "A1",
-          streak: s.streak || 1,
-          unlockedBadges: s.unlockedBadges || []
-        }));
+        const verifyEmail = (req.query.verifyEmail as string || "").toLowerCase().trim();
+        students = studentsRaw.map((s: any) => {
+          if (verifyEmail && s.email?.toLowerCase() === verifyEmail) {
+            // Retornar perfil completo del propio alumno para conservar campos privados (ej: purchasedVideos, teléfono, progreso)
+            return s;
+          }
+          return {
+            id: s.id,
+            name: s.name,
+            xp: s.xp || 0,
+            level: s.level || "A1",
+            streak: s.streak || 1,
+            unlockedBadges: s.unlockedBadges || []
+          };
+        });
       }
 
       // Filter alerts if not admin (students only see alerts relevant to them, if any)
@@ -623,7 +633,7 @@ async function startServer() {
         if (!existingIP) activeSessions.set(verifyEmail.toLowerCase(), clientIP);
       }
 
-      res.json({ students, communityMessages, alerts, teachers, admins, ads, progressReports, customMetrics, subscriptionPrice, subscriptionScope, subscriptionBlocked, subscriptionUserLimit, subscriptionEnabled });
+      res.json({ students, communityMessages, alerts, teachers, admins, ads, progressReports, customMetrics, subscriptionPrice, subscriptionScope, subscriptionBlocked, subscriptionUserLimit, subscriptionEnabled, premiumVideos });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: "DB error" });
@@ -1242,6 +1252,151 @@ async function startServer() {
     const { isBad } = await moderatePostWithAI(message);
     if (isBad) return res.json({ tip: "⚠️ Mensaje bloqueado por contener palabras prohibidas." });
     res.json({ tip: null });
+  });
+
+  // =============================================
+  // PREMIUM VIDEOS & STRIPE PAYMENTS
+  // =============================================
+  let stripeInstance: any = null;
+  function getStripeInstance() {
+    if (!stripeInstance && process.env.STRIPE_SECRET_KEY) {
+      stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: "2023-10-16" as any,
+      });
+    }
+    return stripeInstance;
+  }
+
+  // Admin: Create Premium Video
+  app.post("/api/admin/videos/create", async (req, res) => {
+    try {
+      const { title, description, videoUrl, price, pdfUrl } = req.body;
+      if (!title || !videoUrl || price === undefined) {
+        return res.status(400).json({ error: "Título, URL del video y precio son obligatorios." });
+      }
+      const videos = await getCustomData("premium_videos") || [];
+      const newVideo = {
+        id: `vid_${Date.now()}`,
+        title: title.trim(),
+        description: (description || "").trim(),
+        videoUrl: videoUrl.trim(),
+        pdfUrl: (pdfUrl || "").trim(),
+        price: Math.max(0, Number(price)),
+        createdAt: new Date().toISOString()
+      };
+      videos.push(newVideo);
+      await setCustomData("premium_videos", videos);
+      res.json({ success: true, videos });
+    } catch (err) {
+      console.error("Error creating premium video:", err);
+      res.status(500).json({ error: "Error al guardar el video en la base de datos." });
+    }
+  });
+
+  // Admin: Delete Premium Video
+  app.post("/api/admin/videos/delete", async (req, res) => {
+    try {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: "ID del video requerido." });
+      let videos = await getCustomData("premium_videos") || [];
+      videos = videos.filter((v: any) => v.id !== id);
+      await setCustomData("premium_videos", videos);
+      res.json({ success: true, videos });
+    } catch (err) {
+      console.error("Error deleting premium video:", err);
+      res.status(500).json({ error: "Error al eliminar el video." });
+    }
+  });
+
+  // Student/Admin: Initiate Stripe Checkout Session
+  app.post("/api/stripe/create-checkout", async (req, res) => {
+    try {
+      const { videoId, email, baseUrl } = req.body;
+      if (!videoId || !email) {
+        return res.status(400).json({ error: "Se requiere videoId y correo electrónico." });
+      }
+
+      const videos = await getCustomData("premium_videos") || [];
+      const video = videos.find((v: any) => v.id === videoId);
+      if (!video) return res.status(404).json({ error: "El video no existe en el catálogo." });
+
+      const stripe = getStripeInstance();
+      if (stripe) {
+        // Create real Stripe Checkout Session
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [
+            {
+              price_data: {
+                currency: "eur",
+                product_data: {
+                  name: video.title,
+                  description: video.description || "Clase de Formación de Alta Calidad",
+                },
+                unit_amount: Math.round(video.price * 100), // in cents
+              },
+              quantity: 1,
+            },
+          ],
+          mode: "payment",
+          customer_email: email,
+          metadata: {
+            videoId,
+            email,
+            type: "premium_video_purchase"
+          },
+          success_url: `${baseUrl || "http://localhost:3000"}?stripe_success=true&videoId=${videoId}`,
+          cancel_url: `${baseUrl || "http://localhost:3000"}?stripe_cancel=true`,
+        });
+
+        return res.json({ url: session.url, simulated: false });
+      } else {
+        // No Stripe Key configured yet, return simulated payment required
+        return res.json({ url: null, simulated: true, price: video.price, title: video.title });
+      }
+    } catch (err: any) {
+      console.error("Stripe Checkout Error:", err);
+      res.status(500).json({ error: err.message || "Error al iniciar pasarela de pagos con Stripe." });
+    }
+  });
+
+  // Purchase Success Callback (both real redirection success or simulated payment)
+  app.post("/api/stripe/payment-success", async (req, res) => {
+    try {
+      const { videoId, email } = req.body;
+      if (!videoId || !email) {
+        return res.status(400).json({ error: "Faltan parámetros requeridos (videoId, email)." });
+      }
+
+      const student = await getStudent(email);
+      if (!student) return res.status(404).json({ error: "El alumno no se encuentra registrado en el sistema." });
+
+      if (!student.purchasedVideos) {
+        student.purchasedVideos = [];
+      }
+      if (!student.purchasedVideos.includes(videoId)) {
+        student.purchasedVideos.push(videoId);
+      }
+      
+      await saveStudent(student);
+
+      // Log purchase alert inside system notifications
+      const purchaseAlert = {
+         id: `purchase_${Date.now()}`,
+         title: `💰 Transacción: "${student.name} ${student.lastName || ""}" (${email}) ha adquirido de por vida la clase premium "${videoId}".`,
+         type: "success",
+         timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+         violatorEmail: email,
+         violatorName: student.name,
+         isViolationUnit: false
+      };
+      await saveAlert(purchaseAlert);
+
+      res.json({ success: true, student });
+    } catch (err: any) {
+      console.error("Payment Confirmation Error:", err);
+      res.status(500).json({ error: "Ocurrió un error al desbloquear la compra." });
+    }
   });
 
   // Serve frontend
