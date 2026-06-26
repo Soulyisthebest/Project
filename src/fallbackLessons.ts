@@ -22,863 +22,1207 @@ export interface LessonData {
   practice: PracticeQuestion[];
 }
 
-// Translations dictionary for fallback vocabulary explanations and guides based on target selected language
-const TRANS: Record<string, Record<string, string>> = {
-  ar: {
-    rule: "القواعد اللغوية والتركيب:",
-    pitfall: "الأخطاء الشائعة:",
-    tip: "نصيحة هامة للهجرة والدراسة في إسبانيا:"
-  },
-  fr: {
-    rule: "Règles grammaticales et structure :",
-    pitfall: "Erreurs fréquentes à éviter :",
-    tip: "Conseil important pour vos études et séjour en Espagne :"
-  },
-  en: {
-    rule: "Grammar Rules and Structure:",
-    pitfall: "Common Pitfalls to Avoid:",
-    tip: "Important Tip for Living & Studying in Spain:"
-  },
-  es: {
-    rule: "Reglas Gramaticales y Estructura:",
-    pitfall: "Errores Comunes a Evitar:",
-    tip: "Consejo Clave Escolar y Administrativo:"
-  }
+const T: Record<string, Record<string, string>> = {
+  ar: { rule: "القواعد:", pitfall: "أخطاء شائعة:", tip: "نصيحة للدراسة في إسبانيا:" },
+  fr: { rule: "Règles grammaticales :", pitfall: "Erreurs fréquentes :", tip: "Conseil pour vos études en Espagne :" },
+  en: { rule: "Grammar Rules:", pitfall: "Common Mistakes:", tip: "Study Tip for Spain:" }
 };
 
-// Generates highly custom, topic-specific Spanish lessons with exact grammar tables, vocabulary, and quizzes
-export function getFallbackLessonData(lvl: string, topic: string, lang: string): LessonData {
-  const tLang = lang === "ar" ? "ar" : lang === "fr" ? "fr" : "en";
-  const label = lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English";
-
-  // Detailed templates for ALL topics in the system to guarantee 100% unique pages
-  let explanation = "";
-  let vocabulary: Vocabulary[] = [];
-  let practice: PracticeQuestion[] = [];
-
-  // Let's build distinct content tailored to the exact topic name
-  if (topic.includes("Alphabet")) {
-    explanation = `### Masterclass: El Alfabeto y Pronunciación (CEFR ${lvl})
-
-La clave para hablar español con la entonación y confianza de un nativo radica en dominar el sistema de fonemas castellano. A diferencia del francés o del inglés, el español es un **idioma fonético**: se pronuncia exactamente como se escribe.
-
-A continuación, tienes la guía oficial con las **27 letras** de la Real Academia Española (RAE), sus nombres, pronunciación exacta en España (Castellano de Madrid) y ejemplos prácticos:
-
-| Letra | Nombre | Sonido / Pronunciación (Castellano) | Ejemplo (Audio) | Traducción (FR / EN) |
-| :---: | :--- | :--- | :--- | :--- |
-| **A** | a | /a/ (vocal abierta clara) | **Amor** | Amour / Love |
-| **B** | be | /b/ (oclusiva, suave entre vocales) | **Banco** | Banque / Bank |
-| **C** | ce | /θ/ (como "th" ante E, I) o /k/ (ante A, O, U) | **Casa**, **Cero** | Maison, Zéro / House, Zero |
-| **D** | de | /d/ (dental suave, lengua rozando incisivos) | **Día** | Jour / Day |
-| **E** | e | /e/ (vocal media semicerrada) | **Estrella** | Étoile / Star |
-| **F** | efe | /f/ (fricativa labiodental) | **Flor** | Fleur / Flower |
-| **G** | ge | /x/ (gutural Jante E, I) o /g/ (ante A, O, U) | **Gato**, **Gente** | Chat, Gens / Cat, People |
-| **H** | hache | **¡Muda!** Nunca se pronuncia | **Hola** | Bonjour / Hello |
-| **I** | i | /i/ (vocal cerrada) | **Isla** | Île / Island |
-| **J** | jota | /x/ (sonido gutural fuerte áspero, como خ árabe) | **Jardín** | Jardin / Garden |
-| **K** | ka | /k/ (oclusiva velar sorda) | **Kilo** | Kilo |
-| **L** | ele | /l/ (sonido lateral alveolar) | **Libro** | Livre / Book |
-| **M** | eme | /m/ (bilabial nasal) | **Madre** | Mère / Mother |
-| **N** | ene | /n/ (alveolar nasal) | **Noche** | Nuit / Night |
-| **Ñ** | eñe | /ɲ/ (nasal palatal, igual a "gn" en francés/italiano) | **España** | Espagne / Spain |
-| **O** | o | /o/ (vocal media posterior) | **Ojo** | Œil / Eye |
-| **P** | pe | /p/ (oclusiva bilabial) | **Padre** | Père / Father |
-| **Q** | cu | /k/ (siempre silencia la 'u' en las parejas *que*, *qui*) | **Queso** | Fromage / Cheese |
-| **R** | ere | /r/ (vocal simple) o /rr/ (vibrante múltiple inicial/doble) | **Rosa**, **Perro** | Rose, Chien / Rose, Dog |
-| **S** | ese | /s/ (alveolar fricativa) | **Sol** | Soleil / Sun |
-| **T** | te | /t/ (dental oclusiva, lengua tras los dientes) | **Tren** | Train |
-| **U** | u | /u/ (vocal cerrada velar de labios redondeados) | **Uva** | Raisin / Grape |
-| **V** | uve | /b/ (**¡EXACTAMENTE igual a la B!** Nunca se labiodentaliza) | **Vida** | Vie / Life |
-| **W** | uve doble | /b/ o /w/ (se limita a extranjerismos adoptados) | **Web** | Web |
-| **X** | equis | /ks/ entre vocales, o /s/ delante de consonante | **Examen** | Examen |
-| **Y** | i griega | /y/ (palatal fricativa) o vocal /i/ como conjunción | **Ya**, **Y** | Déjà, Et / Already, And |
-| **Z** | zeta | /θ/ (colocando la punta de la lengua entre los dientes) | **Zapato** | Chaussure / Shoe |
-
-#### 1. Fonemas y Consonantes Clave
-- **La H (hache)**: Es de vital importancia recordar que es completamente silenciosa en español. Pronunciar la H con aspiración es un error muy común.
-- **La Ñ (eñe)**: Símbolo cultural de nuestra ortografía. Se pronuncia uniendo la parte media de la lengua al paladar blando.
-- **La C, la S y la Z**: En Europa Occidental hispana, existe distinción. La C (ante E, I) y la Z suenan /θ/. En América Central, del Sur y parte de Andalucía, todas estas letras se pronuncian uniformemente como /s/ (fenómeno llamado *seseo*).
-- **La V (uve)**: No permitas que el inglés o el francés afecten tu audición; los fonemas españoles de 'b' y 'v' se fusionaron hace siglos. Se pronuncian exactamente igual, con los labios tocándose levemente.
-
-#### 2. Regla de Oro de las Vocales (A, E, I, O, U)
-En español, las vocales son absolutamente puras, cortas e invariables. Nunca se diptongan de forma involuntaria ni se reducen como el sonido "schwa" (ə) en inglés. ¡Una "A" siempre sonará "A"!`;
-
-    vocabulary = [
-      {
-        spanish: "El alfabeto",
-        dynamicLang: lang === "ar" ? "الأبجدية" : lang === "fr" ? "L'alphabet" : "The alphabet",
-        explanation: lang === "ar" ? "مجموعة الحروف الكاملة للغة الإسبانية." : lang === "fr" ? "L'ensemble complet des lettres espagnoles." : "The full system of Spanish letters."
-      },
-      {
-        spanish: "Letra muda",
-        dynamicLang: lang === "ar" ? "حرف صامت" : lang === "fr" ? "Lettre muette" : "Silent letter",
-        explanation: lang === "ar" ? "الحرف H لا ينطق أبداً في الإسبانية الكلاسيكية." : lang === "fr" ? "La lettre H n'est jamais prononcée." : "The letter H is never pronounced."
-      },
-      {
-        spanish: "La pronunciación",
-        dynamicLang: lang === "ar" ? "النطق" : lang === "fr" ? "La prononciation" : "The pronunciation",
-        explanation: lang === "ar" ? "طريقة نطق الأصوات الإسبانية بدقة." : lang === "fr" ? "La façon exacte d'émettre les sons espagnols." : "The precise way Spanish sounds are voiced."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Cómo se pronuncia la letra 'H' en la palabra española 'hola'?",
-        options: ["Se pronuncia como una H fuerte", "Es completamente muda", "Se pronuncia como una J", "Cambia según la vocal"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: La letra _________ (como en la palabra España) tiene un sonido nasal único.",
-        blankWord: "eñe"
-      }
-    ];
-  } 
-  else if (topic.includes("Greetings") || topic.includes("Farewells")) {
-    explanation = `### Masterclass: Saludos y Despedidas en España (CEFR ${lvl})
-
-En España, el saludo es el primer paso de cualquier trámite administrativo o contacto social. No saludar con propiedad en un establecimiento o consulado puede considerarse una falta de cortesía.
-
-#### 1. Saludos Formales e Informales
-- **¡Hola!**: Válido en cualquier situación social informal o semi-formal.
-- **Buenos días**: Se utiliza desde la mañana hasta la hora de comer (aproximadamente las 14:00 - 15:00 en España).
-- **Buenas tardes**: Se utiliza desde después de comer hasta que anochece (aproximadamente hasta las 20:30 o 21:00).
-- **Buenas noches**: Usado tanto para saludar como para despedirse antes de dormir.
-
-#### 2. Preguntar cómo está alguien
-- **¿Cómo estás?** / **¿Qué tal?**: Registro informal entre estudiantes o amigos.
-- **¿Cómo está usted?**: Obligatorio ante autoridades administrativas, funcionarios públicos, caseros o profesores universitarios veteranos.`;
-
-    vocabulary = [
-      {
-        spanish: "Buenos días",
-        dynamicLang: lang === "ar" ? "صباح الخير" : lang === "fr" ? "Bonjour (matin)" : "Good morning",
-        explanation: lang === "ar" ? "تستخدم حتى وقت الغداء (الساعة الواحدة أو الثانية ظهراً)." : lang === "fr" ? "Utilisé le matin jusqu'au déjeuner (14h)." : "Used in the morning until lunchtime."
-      },
-      {
-        spanish: "Usted",
-        dynamicLang: lang === "ar" ? "حضرتك / صيغة الاحترام" : lang === "fr" ? "Vouvoiement (respect)" : "Formal you (respect)",
-        explanation: lang === "ar" ? "ضمير مخصص للتحدث باحترام مع الأساتذة والموظفين." : lang === "fr" ? "Pronom formel de politesse pour les professeurs et officiels." : "The pronoun of respect for professors, clerks, and elders."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "En España, ¿hasta qué hora aproximada se suele decir 'Buenos días' antes de pasar a 'Buenas tardes'?",
-        options: ["Hasta las 12:00 del mediodía", "Hasta las 14h-15h (después de comer)", "Hasta las 18:00 de la tarde", "Toda la jornada de sol"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: Para despedirte de un profesor formalmente puedes decirle 'Hasta _________ (hasta el próximo día)'.",
-        blankWord: "luego"
-      }
-    ];
-  }
-  else if (topic.includes("Introductions") || topic.includes("Name, Age, Origin")) {
-    explanation = `### Masterclass: Presentarse en el Entorno Universitario (CEFR ${lvl})
-
-Aprender a declarar formal o informalmente quién eres, cuántos años tienes y de dónde procedes es fundamental para resolver actas de matrícula o presentarte el primer día de clase en España.
-
-#### 1. El Nombre y Apellido
-En español tenemos dos verbos principales para indicar quiénes somos:
-- **Llamarse**: "Me llamo Omar" (registro estándar).
-- **Ser**: "Soy Marie" (rápido e inequívoco).
-
-#### 2. Declarar la Edad (¡Ojo con el falso amigo!)
-A diferencia del inglés (*I am 20*) o del francés (*J'ai 20 ans*), en español la edad siempre se **TIENE**:
-- *Tengo 22 años.* (Uso del verbo **Tener**). Decir *"Soy 22 años"* es un error gramatical grave que delata inmediatamente a un estudiante novato.
-
-#### 3. País de Origen y Nacionalidad
-- *"Soy de Marruecos / Francia / Argelia / Túnez..."* (Verbo **Ser + de** para indicar procedencia).
-- *"Vivo en Barcelona."* (Verbo **Vivir + en** para indicar tu residencia de estudios actual).`;
-
-    vocabulary = [
-      {
-        spanish: "Tener ... años",
-        dynamicLang: lang === "ar" ? "العمر بالسنين" : lang === "fr" ? "Avoir ... ans" : "To be ... years old",
-        explanation: lang === "ar" ? "نستخدم دائمًا فعل الملكية Tener للتعبير عن العمر." : lang === "fr" ? "On utilise toujours le verbe Tener pour l'âge en espagnol." : "We always use the verb 'Tener' (to have) to express age."
-      },
-      {
-        spanish: "El apellido",
-        dynamicLang: lang === "ar" ? "اسم العائلة / اللقب" : lang === "fr" ? "Le nom de famille" : "Last name",
-        explanation: lang === "ar" ? "اللقب العائلي الذي يظهر في بطاقة الطالب وجواز سفرك." : lang === "fr" ? "Le nom de famille indispensable pour les dossiers d'inscription." : "Family name, vital for registration records."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Cuál es la forma correcta para presentarte y decir tu edad en español?",
-        options: ["Soy 24 años", "Tengo 24 años", "Hago 24 años", "Estoy 24 años"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: Me llamo Amina y _________ de Marruecos.",
-        blankWord: "soy"
-      }
-    ];
-  }
-  else if (topic.includes("SER vs ESTAR")) {
-    explanation = `### Masterclass: La Batalla Definitiva: SER vs ESTAR (CEFR ${lvl})
-
-La mayor dificultad para cualquier estudiante extranjero en España es dominar la diferencia crucial entre **SER** y **ESTAR**. Usar uno por otro cambia completamente el significado de tu frase.
-
-#### 1. El Verbo SER (Características Permanentes / Definitorias)
-Utilizamos **SER** para aspectos estables, inherentes o constitutivos:
-- **Origen o Nacionalidad**: *Yo soy español*, *Ella es argelina*.
-- **Profesión / Estatus de Estudiante**: *Soy estudiante de ingeniería*, *Él es profesor*.
-- **Fecha y Hora**: *Hoy es lunes*, *Son las diez*.
-- **Relaciones personales**: *Pedro es mi casero*, *Amina es mi compañera de piso*.
-
-#### 2. El Verbo ESTAR (Estados Temporales / Localización)
-Utilizamos **ESTAR** para situaciones transitorias, estados de ánimo o ubicación espacial:
-- **Localización**: *La universidad está en Sevilla*, *Mi piso está en el centro*.
-- **Estado Físico o Emocional**: *Estoy cansado*, *Estoy enfermo*.
-- **Situación Administrativa Temporal**: *Estoy empadronado en Madrid*, *Estoy matriculado*.
-
-> **¡Atención!** "Ser aburrido" significa que la persona es monótona o sosa. "Estar aburrido" significa que la persona está aburriéndose en este momento. `;
-
-    vocabulary = [
-      {
-        spanish: "Estar empadronado",
-        dynamicLang: lang === "ar" ? "مسجل في البلدية" : lang === "fr" ? "Être enregistré à la mairie" : "To be registered at town hall",
-        explanation: lang === "ar" ? "تستخدم مع 'Estar' لأنها حالة ناتجة عن إجراء إداري." : lang === "fr" ? "S'utilise avec Estar pour exprimer un état administratif installé." : "Used with 'Estar' as it is a localized administrative status."
-      },
-      {
-        spanish: "Ser estudiante",
-        dynamicLang: lang === "ar" ? "طالب دراسي" : lang === "fr" ? "Être étudiant" : "To be a student",
-        explanation: lang === "ar" ? "تستخدم مع 'Ser' لأنها تعبر عن هويتك الحالية ومسارك المهني." : lang === "fr" ? "S'utilise avec Ser car c'est votre identité ou rôle social principal." : "Used with 'Ser' as it defines your identity and role."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "Para decir que tu biblioteca universitaria está situada en un barrio concreto de la ciudad, debes usar:",
-        options: ["El verbo SER (La biblioteca es en el barrio...)", "El verbo ESTAR (La biblioteca está en el barrio...)", "El verbo TENER (La biblioteca tiene el barrio...)", "El verbo HACER"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa la frase: Yo _________ cansado después de terminar el examen de nivel de la escuela.",
-        blankWord: "estoy"
-      }
-    ];
-  }
-  else if (topic.includes("Noun Gender") || topic.includes("Definite & Indefinite")) {
-    explanation = `### Masterclass: El Género y los Artículos en Español (CEFR ${lvl})
-
-En español, todos los sustantivos (tanto personas como objetos inanimados) tienen un género gramatical obligatorio: **masculino** o **femenino**. El género del sustantivo determina el artículo y el adjetivo que lo acompañan.
-
-#### 1. Reglas Generales de Género
-- **Masculino (Suelen terminar en -O)**: *El libro*, *El examen*, *El piso*.
-- **Femenino (Suelen terminar en -A, -DAD, -CIÓN, -SIÓN)**: *La libreta*, *La universidad*, *La homologación*, *La pensión*.
-
-#### 2. Excepciones Clásicas
-Hay palabras comunes que rompen la regla y suelen confundir en trámites oficiales:
-- **El mapa** / **El día** / **El problema** / **El idioma**: Terminan en -A pero son masculinos.
-- **La mano** / **La foto**: Terminan en -O pero son femeninas.
-
-#### 3. Artículos Determinados e Indeterminados
-
-| Tipo | Masculino Singular | Femenino Singular | Masculino Plural | Femenino Plural |
-| :--- | :--- | :--- | :--- | :--- |
-| **Definidos** | El piso | La clase | Los pisos | Las clases |
-| **Indefinidos** | Un piso | Una clase | Unos pisos | Unas clases |`;
-
-    vocabulary = [
-      {
-        spanish: "Sustantivo",
-        dynamicLang: lang === "ar" ? "اسم / sustantivo" : lang === "fr" ? "Le nom / substantif" : "Noun",
-        explanation: lang === "ar" ? "كل الكلمات التي تدل على الأشخاص، الأماكن أو الأشياء ولها جنس محدد." : lang === "fr" ? "Touts les mots désignant des personnes, des objets ou des concepts." : "Every word representing a person, object, or concept."
-      },
-      {
-        spanish: "Femenino",
-        dynamicLang: lang === "ar" ? "المؤنث" : lang === "fr" ? "Féminin" : "Feminine",
-        explanation: lang === "ar" ? "الكلمات التي تنتهي عادة بـ a أو ción وتأخذ الأداة la." : lang === "fr" ? "Mots finissant par -a, -dad, ou -ción." : "Words usually ending in -a, -dad, or -ción."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Cuál de estos sustantivos administrativos de uso frecuente es MASCULINO?",
-        options: ["La homologación", "El problema", "La matrícula", "La universidad"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: _________ matrícula anual cuesta más cara en las universidades privadas españoles.",
-        blankWord: "La"
-      }
-    ];
-  }
-  else if (topic.includes("Regular -AR Verbs")) {
-    explanation = `### Masterclass: El Presente de Indicativo (Verbos en -AR) (CEFR ${lvl})
-
-Para conversar, interactuar con compañeros de piso y redactar correos a la secretaría del centro de estudios, debes conjugar con soltura el presente de indicativo. El primer grupo de verbos son los terminados en **-AR** (como *hablar*, *estudiar*, *trabajar*, *buscar*).
-
-#### 1. Regla de Conjugación Regular (-AR)
-Para conjugar, eliminamos la terminación "-ar" del infinitivo y añadimos las despinencias correspondientes al sujeto:
-
-- **Yo**: -o (yo habl-o)
-- **Tú**: -as (tú habl-as)
-- **Él / Ella / Usted**: -a (él habl-a)
-- **Nosotros**: -amos (nosotros habl-amos)
-- **Vosotros**: -áis (vosotros habl-áis)
-- **Ellos / Ellas / Ustedes**: -an (ellos habl-an)
-
-#### 2. Ejemplo Práctico: Verbo Trabajar (To Work)
-- *Yo trabajo en una cafetería de Barcelona.*
-- *Nosotros estudiamos en el Grado Superior de Informática.*`;
-
-    vocabulary = [
-      {
-        spanish: "Aprender",
-        dynamicLang: lang === "ar" ? "يتعلم" : lang === "fr" ? "Apprendre" : "To learn",
-        explanation: lang === "ar" ? "اكتساب المعارف واللغات الجديدة." : lang === "fr" ? "Acquérir de nouvelles compétences linguistiques." : "To acquire new skills or languages."
-      },
-      {
-        spanish: "Estudiar",
-        dynamicLang: lang === "ar" ? "يدرس" : lang === "fr" ? "Étudier" : "To study",
-        explanation: lang === "ar" ? "القيام بالتحصيل الأكاديمي في المعهد أو الجامعة." : lang === "fr" ? "Suivre des cours à l'université ou en école espagnole." : "To attend courses or prepare academic content in Spain."
-      }
-    ];
-
-    practice = [
-      {
-        type: "conjugation",
-        question: "Conjuga el verbo ESTUDIAR en presente para el sujeto 'Nosotros': Nosotros (estudiar) ________ español por la tarde.",
-        verb: "estudiar",
-        correctAnswer: "estudiamos"
-      },
-      {
-        type: "multiple-choice",
-        question: "¿Cuál es la conjugación adecuada del verbo 'trabajar' para 'tú'?",
-        options: ["trabajo", "trabajas", "trabaja", "trabajáis"],
-        correctIndex: 1
-      }
-    ];
-  }
-  else if (topic.includes("GUSTAR") || topic.includes("Preference Verbs")) {
-    explanation = `### Masterclass: Los Verbos de Gustos y Preferencias (GUSTAR) (CEFR ${lvl})
-
-En español, expresar gustos y aficiones difiere de la mayoría de los idiomas occidentales. El verbo **GUSTAR** no funciona como "like" en inglés o "aimer" en francés; funciona como "plaire" (gustar o agradar a alguien).
-
-#### 1. Estructura Obligatoria de GUSTAR
-El sujeto real es la cosa que te gusta, por lo que el verbo casi siempre se usa en tercera persona (*GUSTA* si es singular o *GUSTAN* si es plural):
-
-- *(A mí) **Me** gusta el español.* (El español agrada a mí)
-- *(A ti) **Te** gustan las tapas.* (Las tapas agradan a ti - Plural)
-- *(A él/ella) **Le** gusta estudiar en Sevilla.*
-- *(A nosotros) **Nos** gusta el clima de Málaga.*
-- *(A vosotros) **Os** gustan las fiestas universitarias.*
-- *(A ellos) **Les** gusta la biblioteca.*
-
-#### 2. Otros verbos similares
-Con la misma lógica funcionan: *Encantar* (encantar), *Interesar* (interesar), *Dolera* (doler).`;
-
-    vocabulary = [
-      {
-        spanish: "Me gusta",
-        dynamicLang: lang === "ar" ? "يعجبني" : lang === "fr" ? "J'aime / Ça me plaît" : "I like (it pleases me)",
-        explanation: lang === "ar" ? "التركيب الأهم للتعبير عن الإعجاب بالأشياء المفردة." : lang === "fr" ? "Structure obligatoire pour dire qu'une chose singulière vous plaît." : "The core phrase used for singular items liked."
-      },
-      {
-        spanish: "Me encanta",
-        dynamicLang: lang === "ar" ? "أعشق" : lang === "fr" ? "J'adore / Ça m'enchante" : "I love (it enchants me)",
-        explanation: lang === "ar" ? "تعبير أقوى من Gustar يعبر عن الشغف الكبير بشيء ما." : lang === "fr" ? "Plus fort que 'gustar', similaire à adorer à la folie." : "Expresses intense enjoyment of a subject."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "Si te agradan mucho los platos de la cocina española (las tapas en plural), ¿cómo lo expresas correctamente?",
-        options: ["Me gusta las tapas", "Me gustan las tapas", "Yo gusto las tapas", "Me gusto las tapas"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa con el pronombre correcto: A nosotros _________ gusta mucho el sol y la playa de Alicante.",
-        blankWord: "nos"
-      }
-    ];
-  }
-  else if (topic.includes("Numbers 1 to 100")) {
-    explanation = `### Masterclass: Números del 1 al 100 en el Día a Día (CEFR ${lvl})
-
-Los números son vitales para entender precios de alquiler de habitaciones, ir a comprar al supermercado, preguntar precios de tiques de tren y pagar las cuotas administrativas de tus expedientes de visado.
-
-#### 1. Del 1 al 30 (¡Cuidado con la ortografía!)
-- **11 (once)**, **12 (doce)**, **13 (trece)**, **14 (catorce)**, **15 (quince)**.
-- Del 16 al 19 se escriben en una sola palabra: *dieciséis*, *diecisiete*, *dieciocho*, *diecinueve*.
-- Del 21 al 29 también se fusionan en una sola palabra: *veintiuno*, *veintidós*, *veintitrés*, *veinticuatro*, *veinticinco*.
-
-#### 2. Decenas del 30 al 100
-A partir del 30, se escriben separadas por la conjunción "y":
-- *Treinta (30)* -> *Treinta y uno* (31), *Treinta y dos* (32).
-- *Cuarenta (40)*, *Cincuenta (50)*, *Sesenta (60)*, *Setenta (70)*, *Ochenta (80)*, *Noventa (90)*, *Cien (100)*.`;
-
-    vocabulary = [
-      {
-        spanish: "Precio",
-        dynamicLang: lang === "ar" ? "السعر" : lang === "fr" ? "Le prix" : "Price",
-        explanation: lang === "ar" ? "قيمة السلعة أو إيجار الغرفة باليورو." : lang === "fr" ? "Le coût d'un logement étudiant ou d'un service." : "The expense of monthly rent or student services."
-      },
-      {
-        spanish: "Pagar en efectivo",
-        dynamicLang: lang === "ar" ? "يدفع نقداً" : lang === "fr" ? "Payer en liquide" : "To pay in cash",
-        explanation: lang === "ar" ? "تسديد المبالغ المالية ورقياً أو بالعملة المعدنية." : lang === "fr" ? "Régler en billets de banque ou pièces de monnaie." : "Paying manually with currency physical coins or notes."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Cómo se escribe correctamente en español el número 23?",
-        options: ["Veinte y tres", "Veintitres", "Veintitrés (con tilde)", "Vente y tres"],
-        correctIndex: 2
-      },
-      {
-        type: "fill-blank",
-        question: "Completa la operación matemática básica en español: Treinta más veinte es igual a _________.",
-        blankWord: "cincuenta"
-      }
-    ];
-  }
-  else if (topic.includes("Ordering Food") || topic.includes("Gastronomy")) {
-    explanation = `### Masterclass: Gastronomía y Cómo Pedir en un Bar de Tapas (CEFR ${lvl})
-
-La cultura española gira en torno a la comida y los momentos que compartes de forma colectiva en bares y terrazas. Saber pedir correctamente comida te abrirá instantáneamente la puerta para hacer buenas migas con compañeros de clase autóctonos.
-
-#### 1. Fórmulas de Cortesía habituales
-Para pedir comida de forma educada en España, evitamos traducir literalmente expresiones rudas. Utilizamos:
-- **Para pedir educadamente**: *"Me pones, por favor..."* / *"Querría..."* / *"Para mí, un café cortado, por favor."*
-- **La Cuenta (The bill)**: Puedes pedirla al camarero diciendo: *"¿Me cobras, por favor?"* o bien *"La cuenta, cuando puedas, por favor."*
-
-#### 2. Vocabulario Esencial de Comidas de España
-- **Una ración**: Plato completo de comida para compartir (croquetas, patatas bravas).
-- **Una tapa**: Pequeña porción gratuita o barata de cortesía que acompaña a tu bebida.`;
-
-    vocabulary = [
-      {
-        spanish: "La cuenta, por favor",
-        dynamicLang: lang === "ar" ? "الحساب لو سمحت" : lang === "fr" ? "L'addition, s'il vous plaît" : "The bill, please",
-        explanation: lang === "ar" ? "تعبير مستخدم لطلب فاتورة الحساب في المقهى أو المطعم." : lang === "fr" ? "Formule indispensable pour régler le serveur." : "The polite formula to ask the server for the final receipt."
-      },
-      {
-        spanish: "Patatas bravas",
-        dynamicLang: lang === "ar" ? "بطاطس حارة" : lang === "fr" ? "Pommes de terre épicées" : "Spicy potato tapas",
-        explanation: lang === "ar" ? "طبق البطاطس المقلية الإسباني الشهير مع الصلصة الخاصة." : lang === "fr" ? "Tapas typiques composées de pommes de terre frites avec sauce épicée." : "Famous Spanish standard fried potato cubes topped with customized sauce."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Cuál es la expresión más común y educada para solicitarle la factura final de consumición al camarero en España?",
-        options: ["¡Cobrar!", "La cuenta, cuando puedas, por favor", "Dame los precios", "Quiero pagar ahora"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: Quiero compartir con mis amigos una _________ (plato grande) de patatas con salsa alioli.",
-        blankWord: "ración"
-      }
-    ];
-  }
-  else if (topic.includes("Reflexive Verbs") || topic.includes("Daily Routines")) {
-    explanation = `### Masterclass: Alquiler, Rutina Diaria y Verbos Reflexivos (CEFR ${lvl})
-
-Para describir todo lo que haces en tu día a día como estudiante internacional en tu piso compartido (pisos de estudiantes), es imprescindible dominar las estructuras de los **verbos reflexivos**.
-
-#### 1. ¿Qué es un Verbo Reflexivo?
-Un verbo es reflexivo cuando el sujeto realiza y recibe la acción al mismo tiempo. En el infinitivo se identifican porque terminan con el pronombre "-se". Ej: *Levantarse* (levantar a uno mismo), *Ducharse*, *Despertarse*, *Vestirse*.
-
-#### 2. Los Pronombres Reflexivos Obligatorios
-Debemos concordar siempre el pronombre antes del verbo conjugado:
-
-- Yo **me** levanto (levantar a mí)
-- Tú **te** levantas
-- Él / Ella / Ud. **se** levanta
-- Nosotros **nos** levantamos
-- Vosotros **os** levantáis
-- Ellos / Ellas / Uds. **se** levantan
-
-#### 3. Ejemplo Práctico de Rutina
-- *Yo me levanto a las 8, me ducho rápido y luego voy a clase en tranvía.*`;
-
-    vocabulary = [
-      {
-        spanish: "Levantarse",
-        dynamicLang: lang === "ar" ? "النهوض من النوم" : lang === "fr" ? "Se lever" : "To get up",
-        explanation: lang === "ar" ? "الاستيقاظ والنهوض من الفراش لبدء اليوم الدراسي." : lang === "fr" ? "Se mettre debout après le réveil matinal." : "Leaving your bed to begin classes or chores."
-      },
-      {
-        spanish: "Ducharse",
-        dynamicLang: lang === "ar" ? "الاستحمام" : lang === "fr" ? "Se doucher" : "To shower",
-        explanation: lang === "ar" ? "تنظيف الجسم بالاستحمام كجزء من روتينك اليومي." : lang === "fr" ? "Laver son corps dans la salle de bain." : "Showering as part of the daily habits."
-      }
-    ];
-
-    practice = [
-      {
-        type: "conjugation",
-        question: "Conjuga el verbo reflexivo LEVANTARSE para la primera persona 'Yo': Yo _________ a las 7:30 de la mañana.",
-        verb: "levantarse",
-        correctAnswer: "me levanto"
-      },
-      {
-        type: "multiple-choice",
-        question: "¿Cuál es el pronombre reflexivo de la tercera persona del singular (él, ella, usted)?",
-        options: ["me", "te", "se", "nos"],
-        correctIndex: 2
-      }
-    ];
-  }
-  else if (topic.includes("Accommodation") || topic.includes("Rental Vocabulary") || topic.includes("Contracts")) {
-    explanation = `### Masterclass: Alojamientos y vocabulario de Alquiler en España (CEFR ${lvl})
-
-Encontrar una alojamiento segura y a buen precio en internet es una de las tareas críticas para todo estudiante extranjero que solicita su visado. El vocabulario es técnico y debes conocerlo bien.
-
-#### 1. Tipos de Alojamiento en España
-- **Piso compartido**: Alquilar una habitación individual dentro de un piso más grande compartiendo cocina y salón con otros estudiantes. Es la opción preferida porque ahorras hasta un 60% de tu presupuesto.
-- **Residencia universitaria**: Alojamientos colectivos pensados exclusivamente para estudiantes. Ofrecen media pensión o pensión completa pero son sensiblemente más caros.
-- **Estudio**: Apartamento pequeño de una sola estancia para una sola persona.
-
-#### 2. Gastos Asociados (Gastos de Comunidad, Fianza y Suministros)
-- **La Fianza**: Depósito de garantía en metálico (legalmente un mes de alquiler para viviendas) que das al casero al inicio del acuerdo y que te debe devolver al marcharte si todo está intacto.
-- **Gastos incluidos / Gastos aparte**: Asegúrate de si los facturas de luz, agua, gas e internet están incluidos en el precio del alquiler mensual.`;
-
-    vocabulary = [
-      {
-        spanish: "La fianza",
-        dynamicLang: lang === "ar" ? "الوديعة / مبلغ التأمين" : lang === "fr" ? "La caution / dépôt de garantie" : "Security deposit",
-        explanation: lang === "ar" ? "مبلغ مالي يعادل إيجار شهر واحد يتم إيداعه لضمان سلامة الغرفة." : lang === "fr" ? "Somme d'argent remise au bailleur en garantie de l'état du bien." : "Refundable security payment held against damages during rent."
-      },
-      {
-        spanish: "Gastos incluidos",
-        dynamicLang: lang === "ar" ? "الرسوم والمصاريف مشمولة" : lang === "fr" ? "Charges comprises" : "Bills included",
-        explanation: lang === "ar" ? "بمعنى أن سعر الإيجار يشمل الإنترنت، الكهرباء والماء ولا تدفعها منفصلة." : lang === "fr" ? "Signifie que l'eau, l'électricité et internet sont inclus dans le loyer." : "Indicates utilities (water, power, wifi) are covered in the rent."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "En España, ¿qué término denomina a la suma de dinero en garantía obligatoria que das al casero al inicio del alquiler?",
-        options: ["La fianza", "La factura", "La comunidad", "El recibo"],
-        correctIndex: 0
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: Alquilo una _________ (habitación individual) en un piso de estudiantes situado en el centro de Granada.",
-        blankWord: "habitación"
-      }
-    ];
-  }
-  else if (topic.includes("Object Pronouns")) {
-    explanation = `### Masterclass: Pronombres de Objeto Directo e Indirecto (CEFR ${lvl})
-
-En español de nivel intermedio, para no sonar reiterativo ni cansino, empleamos los pronombres para sustituir sustantivos de cosas ricas, personas u objetos administrativos.
-
-#### 1. Objeto Directo (Sustituye la cosa)
-Responde a "¿Qué?" o "¿A quién?". Son: **lo, la, los, las**.
-- *¿Tienes el contrato de alquiler?* -> *Sí, **lo** tengo.* (sustituye a "el contrato").
-- *¿Completaste la matrícula de estudios?* -> *Sí, **la** completé.* (sustituye a "la matrícula").
-
-#### 2. Objeto Indirecto (Sustituye a la persona receptora)
-Responde a "¿A quién beneficia o perjudica la acción?". Son: **me, te, le, nos, os, les**.
-- *Compré un regalo a mi compañero de piso.* -> * **Le** compré un regalo.*
-
-#### 3. Regla Especial de Fusión (SE LO)
-Cuando usamos juntos un pronombre directo e indirecto de tercera persona, el indirecto "le/les" se transforma en **SE** por cacofonía:
-- *Le di el contrato al casero.* -> * **Se** **lo** di.* (se = le, lo = el contrato). `;
-
-    vocabulary = [
-      {
-        spanish: "Sustituir",
-        dynamicLang: lang === "ar" ? "استبدال / تعويض" : lang === "fr" ? "Remplacer / substituer" : "To replace / substitute",
-        explanation: lang === "ar" ? "استخدام الضمائر لتجنب تكرار الكلمات مرتين." : lang === "fr" ? "Utiliser un pronom pour éviter de répéter un mot." : "Replacing nouns with precise pronoun structures."
-      },
-      {
-        spanish: "Contrato",
-        dynamicLang: lang === "ar" ? "العقد" : lang === "fr" ? "Le contrat" : "Contract / Agreement",
-        explanation: lang === "ar" ? "وثيقة الإيجار الرسمية التي يجب مراجعتها والتوقيع عليها." : lang === "fr" ? "Document légal d'engagement pour occuper une pièce ou travailler." : "The official binder document."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "Si alguien te pregunta: '¿Has legalizado tus documentos estudiantiles?' y quieres responder afirmativamente de forma abreviada:",
-        options: ["Sí, la he legalizado", "Sí, los he legalizado", "Sí, le he legalizado", "Sí, se los he legalizado"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa la frase con el pronombre directo masculino singular: ¿El justificante de pago? Sí, _________ envié ayer por correo.",
-        blankWord: "lo"
-      }
-    ];
-  }
-  else if (topic.includes("Preterite Tense") || topic.includes("Imperfect Tense")) {
-    explanation = `### Masterclass: El Pasado: Pretérito Indefinido vs Imperfecto (CEFR ${lvl})
-
-En el examen DELE y en la vida civil, narrar tu historia pasada o tus anécdotas en tu país de origen requiere dominar el uso alterno de los dos pasados principales del indicativo: el **Pretérito Indefinido** y el **Pretérito Imperfecto**.
-
-#### 1. Pretérito Indefinido (Acción completada, puntual en el tiempo)
-Se usa para hechos definitivos ocurridos en un momento temporal acotado y cerrado (ayer, la semana pasada, en 2022):
-- *Ayer **llegué** a Madrid.*
-- *La semana pasada **firmé** el contrato de alquiler.*
-- *Endings regulares*: -ar (-é, -aste, -ó, -amos, -asteis, -aron) / -er, -ir (-í, -iste, -ió, -imos, -isteis, -ieron).
-
-#### 2. Pretérito Imperfecto (Descripciones, hábitos, rutinas pasadas)
-Se usa para dar contexto, describir personas o escenarios en el pasado, o detallar hábitos repetitivos sin inicio ni fin preciso:
-- *Cuando **vividía** en Marruecos, siempre **estudiaba** en el cuarto de mi casa.* (Hábito o rutina repetitiva).
-- *Endings regulares*: -ar (-aba, -abas, -aba, -ábamos, -abais, -aban) / -er, -ir (-ía, -ías, -ía, -íamos, -íais, -ían).`;
-
-    vocabulary = [
-      {
-        spanish: "Llegar",
-        dynamicLang: lang === "ar" ? "يصل" : lang === "fr" ? "Arriver" : "To arrive",
-        explanation: lang === "ar" ? "الوصول الفعلي إلى الأراضي الإسبانية أو مدينة الدراسة." : lang === "fr" ? "Atterrir ou s'installer dans son pays d'accueil." : "Reaching the destination or airport."
-      },
-      {
-        spanish: "Hábito",
-        dynamicLang: lang === "ar" ? "عادة سلوكية" : lang === "fr" ? "Habitude passée" : "Past habit",
-        explanation: lang === "ar" ? "سلوك روتيني متكرر في الماضي يعبر عنه بالإمبيرفيكتو." : lang === "fr" ? "Action répétée avec fréquence dans le passé." : "Repetitive past actions."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Qué tiempo pasado debes elegir para describir el clima de tu ciudad natal en el pasado? (Ej. 'Hacía mucho sol...'):",
-        options: ["Pretérito Indefinido", "Pretérito Imperfecto", "Presente", "Futuro"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa la frase con el indefinido del verbo FIRMAR: Ayer yo _________ el contrato definitivo con el arrendador de mi piso.",
-        blankWord: "firmé"
-      }
-    ];
-  }
-  else if (topic.includes("Subjunctive")) {
-    explanation = `### Masterclass: El Presente de Subjuntivo: Deseos y Emociones (CEFR ${lvl})
-
-Entramos en el nivel intermedio alto. El **Subjuntivo** no expresa realidades fácticas comprobables, sino que abre las puertas del mundo subjetivo, los deseos, las dudas, las emociones, la probabilidad y los requisitos administrativos.
-
-#### 1. Cómo formamos el Presente de Subjuntivo
-La regla para construir las despinencias regulares es cruzar las vocales del presente de indicativo:
-
-- Para verbos en **-AR** (como estudiar): tomamos la raíz y añadimos despinencias del grupo -ER (**-e, -es, -e, -emos, -éis, -en**). Ejemplo: *Yo estudie*, *Tú estudies*.
-- Para verbos en **-ER / -IR** (como vivir): añadimos despinencias del grupo -AR (**-a, -as, -a, -amos, -áis, -an**). Ejemplo: *Yo viva*, *Tú vivas*.
-
-#### 2. Usos Principales: Deseos y Voliciones
-- *Quiero que tú **estudies** español.* (Sujeto 1 quiere que Sujeto 2 realice una acción -> ¡Uso obligado de subjuntivo!).
-- *Espero que el consulado me **conceda** el visado pronto.* (Expresión de deseo o esperanza).
-- *Dudo que mi casero **tenga** problemas con la fianza.* (Duda o incertidumbre).`;
-
-    vocabulary = [
-      {
-        spanish: "Quiero que...",
-        dynamicLang: lang === "ar" ? "أريد أن (تتطلب سوبحونكتيف)" : lang === "fr" ? "Je veux que... (+ subjonctif)" : "I want you to... (+ subjunctive)",
-        explanation: lang === "ar" ? "تركيب يربط بين فاعلين مختلفين ويفرض استخدام صيغة الشك والالتزام." : lang === "fr" ? "Formule clé qui oblige l'usage immédiat du subjonctif." : "Key phrase requiring the subjunctive as there are two distinct subjects."
-      },
-      {
-        spanish: "Conceder",
-        dynamicLang: lang === "ar" ? "يمنح / يوافق على طلب" : lang === "fr" ? "Accorder / octroyer" : "To grant / approve",
-        explanation: lang === "ar" ? "الموافقة الرسمية من القنصلية على منحك التأشيرة أو القرار." : lang === "fr" ? "L'approbation légale par l'administration d'un dossier visa." : "The official administrative nod on matching student visas."
-      }
-    ];
-
-    practice = [
-      {
-        type: "conjugation",
-        question: "Conjuga el verbo TENER en presente de subjuntivo para la tercera persona singular (él): Espero que él _________ tiempo para firmar el trato.",
-        verb: "tener",
-        correctAnswer: "tenga"
-      },
-      {
-        type: "multiple-choice",
-        question: "¿Qué frase expresa un deseo correcto exigiendo el subjuntivo?",
-        options: ["Quiero que tú estudias mucho", "Quiero que tú estudies mucho", "Deseo comer paella", "Espero llegar tarde"],
-        correctIndex: 1
-      }
-    ];
-  }
-  else if (topic.includes("Por vs Para")) {
-    explanation = `### Masterclass: El Dilema Eterno: POR vs PARA (CEFR ${lvl})
-
-La diferencia entre **por** y **para** confunde constantemente a los estudiantes francófonos y anglófonos. Con este método definitivo, nunca más dudarás en tus exámenes o tus instancias escritas.
-
-#### 1. Usos Clave de PARA (Orientación al Objetivo / Finalidad)
-- **Finalidad, objetivo o propósito**: *Estudio en España **para** ser ingeniero.* -> (con el fin de).
-- **Destino físico**: *Este tren va **para** Valencia.*
-- **Fecha límite o plazo temporal**: *Tengo que entregar el proyecto **para** el lunes.*
-- **Destinatario de una cosa**: *El dinero del alquiler es **para** mi casero.*
-
-#### 2. Usos Clave de POR (Causa, Motivo, Tránsito o Cambio)
-- **Causa o justificación**: *No fui a clase **por** estar enfermo.* -> (debido a).
-- **Lugar de tránsito o paso**: *Camino **por** el jardín de El Retiro.* -> (a través de).
-- **Medio de transporte o comunicación**: *Te llamo **por** teléfono*, *Te lo envío **por** correo electrónico*.
-- **Intercambio o precio**: *Pagué 400 euros **por** la habitación.*`;
-
-    vocabulary = [
-      {
-        spanish: "La finalidad",
-        dynamicLang: lang === "ar" ? "الهدف أو الغاية" : lang === "fr" ? "Le but / objectif final" : "Goal / Intended purpose",
-        explanation: lang === "ar" ? "الغاية النهائية التي نستخدم لأجلها الأداة 'Para'." : lang === "fr" ? "La motivation ultime associée systématiquement au pronom 'Para'." : "The ultimate destination always requiring 'Para'."
-      },
-      {
-        spanish: "La causa",
-        dynamicLang: lang === "ar" ? "السبب أو الدافع" : lang === "fr" ? "La cause / motif initial" : "Cause / Originating factor",
-        explanation: lang === "ar" ? "الدافع الأولي المؤدي للحدث ونستخدم معه الأداة 'Por'." : lang === "fr" ? "La cause génératrice introduite systématiquement par 'Por'." : "The motivating reason introduced by 'Por'."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "En la frase: 'Estudio programación comercial _________ trabajar en el sector tecnológico de Málaga', ¿qué preposición es la correcta?",
-        options: ["por", "para", "de", "con"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: Envié el formulario firmado al Ministerio de Educación _________ correo certificado.",
-        blankWord: "por"
-      }
-    ];
-  }
-  else if (topic.includes("Visa") || topic.includes("Interview") || topic.includes("Enrollment")) {
-    explanation = `### Masterclass de Comunicación: Presentación Formal y Conversación (CEFR ${lvl})
-
-En esta lección aprenderemos a realizar una presentación personal pulida y formal en español, ideal para ámbitos académicos, entrevistas de estudio o interacciones cotidianas respetuosas. Dominar los registros formal (*usted*) e informal (*tú*) es esencial en cualquier libro de lengua española.
-
-#### 1. Fórmulas de Saludo y Despedida Formales
-- **Saludos**:
-  - *Estimado/a Sr./Sra.* (Para cartas o correos electrónicos oficiales).
-  - *Buenos días, es un placer saludarle.* (Saludo verbal formal).
-- **Despedidas**:
-  - *Quedo a su entera disposición para cualquier aclaración.*
-  - *Le agradezco de antemano su tiempo y atención. Un cordial saludo.*
-
-#### 2. Cómo Expresar Motivaciones y Objetivos
-Para expresar lo que quieres lograr con el español, utiliza estructuras ricas de nivel avanzado:
-- *Tengo la firme intención de perfeccionar mi competencia lingüística para...*
-- *Me complace comunicarle mi gran interés en aprender la cultura española y...*
-- *Mi objetivo principal consiste en lograr una fluidez óptima en situaciones de la vida cotidiana.*`;
-
-    vocabulary = [
-      {
-        spanish: "La fluidez",
-        dynamicLang: lang === "ar" ? "الطلاقة اللغوية" : lang === "fr" ? "La fluidité / aisance" : "Language fluency",
-        explanation: lang === "ar" ? "القدرة على التعبير عن الأفكار والتحدث باللغة الإسبانية بسهولة وتلقائية." : lang === "fr" ? "La capacité à s'exprimer de manière naturelle, coulante et sans hésitations en espagnol." : "The ability to speak and express thoughts smoothly and naturally in Spanish."
-      },
-      {
-        spanish: "Dirigirse a alguien",
-        dynamicLang: lang === "ar" ? "مخاطبة شخص ما" : lang === "fr" ? "S'adresser à quelqu'un" : "To address someone",
-        explanation: lang === "ar" ? "طريقة التحدث مع الآخرين باستخدام الصيغة المناسبة (أنت أو حضراتكم)." : lang === "fr" ? "Utiliser le bon registre de langue (vouvoiement ou tutoiement) para hablar à alguien." : "Using the correct level of formality (usted vs tú) to speak to someone."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: "¿Cuál es la fórmula más adecuada para saludar formalmente por escrito a un responsable académico?",
-        options: ["¡Hola, qué tal estás!", "Estimado Director Académico:", "Buenas, te escribo por lo mío", "Oye, escúchame un momento"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa la despedida formal: Le agradezco su atención. Un _________ saludo.",
-        blankWord: "cordial"
-      }
-    ];
-  }
-  else {
-    // Elegant dynamic generator for Spanish grammar, verb conjugations, and vocabulary (purely linguistic)
-    explanation = `### Masterclass de Español: Nivel ${lvl} — ${topic}
-
-Bienvenido/a a la lección interactiva de nivel **${lvl}** centrada en la destreza lingüística **"${topic}"**. Aprender las sutilezas de la gramática española, las expresiones idiomáticas y las estructuras oracionales te permitirá comunicarte con total seguridad y naturalidad en cualquier entorno hispanohablante.
-
----
-
-#### 1. Gramática Esencial y Estructura de la Oración
-En este capítulo abordaremos cómo enriquecer nuestro discurso utilizando conectores gramaticales y preposiciones de manera impecable:
-- **Conectores de Cohesión**: Para unir ideas con elegancia, utiliza conectores como *no obstante*, *por consiguiente*, *en lo que respecta a*, y *en consecuencia*.
-- **Subjuntivo vs. Indicativo**: Recuerda que los verbos de opinión en negativo (*No creo que...*, *No pienso que...*) exigen el uso del subjuntivo. Ejemplo: *No creo que sea tan difícil.*
-
-#### 2. Matriz de Conjugación de Verbos Destacados (Tiempos del Subjuntivo / Indicativo)
-
-| Sujeto | Presente de Subjuntivo (Hable) | Pretérito Imperfecto (Hablara/Hablase) | Uso Lingüístico Común |
-| :--- | :--- | :--- | :--- |
-| **Yo** | hable | hablara o hablase | Expresar deseos o condiciones hipotéticas |
-| **Tú** | hables | hablaras o hablases | Dar consejos amables a un compañero de clase |
-| **Él/Ella/Ud.** | hable | hablara o hablase | Discursos formales o textos literarios |
-| **Nosotros** | hablemos | habláramos o hablásemos | Proponer planes y debates de clase |
-| **Ellos/Uds.** | hablen | hablaran o hasblasen | Conversación grupal sobre temas culturales |
-
-#### 3. Consejos de Aprendizaje para Hablar como un Nativo
-- **Lectura activa**: Lee libros de literatura o noticias en español para asimilar la estructura natural de las frases sin tener que memorizar listas rígidas de reglas.
-- **Riqueza de vocabulario**: Sustituye verbos comodín como *hacer* o *tener* por verbos más precisos como *elaborar*, *redactar*, *poseer* o *experimentar*.
-
----
-
-#### 4. Errores Frecuentes que Debes Evitar:
-1. *Confundir "ser" y "estar"*: Usar "ser" para estados temporales o ubicaciones (incorrecto) en lugar de "estar". Ejemplo correcto: *La escuela está en el centro.*
-2. *Omitir las preposiciones obligatorias*: Recuerda que verbos como *acordarse* requieren la preposición "de" (*Me acuerdo de ti*).`;
-
-    vocabulary = [
-      {
-        spanish: "El aprendizaje",
-        dynamicLang: lang === "ar" ? "التعلم واكتساب المعرفة" : lang === "fr" ? "L'apprentissage" : "The learning process",
-        explanation: lang === "ar" ? "عملية اكتساب مهارات لغوية ومعرفية جديدة من خلال الدراسة والممارسة." : lang === "fr" ? "Le processus d'acquisition de nouvelles compétences linguistiques et de connaissances." : "The progressive process of acquiring new linguistic skills and understanding."
-      },
-      {
-        spanish: "Dominar el idioma",
-        dynamicLang: lang === "ar" ? "إتقان اللغة" : lang === "fr" ? "Maîtriser la langue" : "To master the language",
-        explanation: lang === "ar" ? "الوصول إلى مستوى عال من الفهم والتحدث بطلاقة." : lang === "fr" ? "Atteindre un niveau avancé de compréhension et d'expression fluide." : "Achieving an advanced degree of comprehension and speaking fluency."
-      },
-      {
-        spanish: "Expresión oral",
-        dynamicLang: lang === "ar" ? "التعبير الشفهي" : lang === "fr" ? "Expression orale" : "Oral expression / Speaking",
-        explanation: lang === "ar" ? "القدرة على التحدث والتواصل بوضوح أمام الآخرين." : lang === "fr" ? "La capacité de parler et de communiquer clairement à haute voix." : "The capacity to speak and communicate ideas clearly aloud."
-      }
-    ];
-
-    practice = [
-      {
-        type: "multiple-choice",
-        question: `Respecto al tema "${topic}", ¿cuál es la mejor manera de dominar la gramática española?`,
-        options: ["Memorizar sin practicar", "Practicar hablando con nativos y leyendo", "No estudiar nada", "Traducir todo literalmente"],
-        correctIndex: 1
-      },
-      {
-        type: "fill-blank",
-        question: "Completa: El estudio diario del idioma nos ayuda a _________ la fluidez.",
-        blankWord: "mejorar"
-      },
-      {
-        type: "translation",
-        question: "Traduce al español: 'The student learns Spanish every day'",
-        correctTranslation: "El estudiante aprende español todos los días"
-      }
-    ];
-  }
-
+function getLang(lang: string) {
+  return lang === "ar" ? "ar" : lang === "fr" ? "fr" : "en";
+}
+
+const LESSONS: Record<string, (lang: string) => LessonData> = {
+
+  "Alphabet & Pronunciation": (lang) => ({
+    title: "El Alfabeto Español y Pronunciación",
+    explanation: `### El Alfabeto Español — 27 letras oficiales
+
+El español es un idioma **fonético**: se pronuncia exactamente como se escribe. Esta es la gran ventaja para los estudiantes árabes y francófonos.
+
+| Letra | Nombre | Pronunciación | Ejemplo |
+|:---:|:---|:---|:---|
+| A | a | /a/ vocal abierta | **Amor** |
+| B | be | /b/ igual que la V | **Banco** |
+| C | ce | /θ/ ante E,I — /k/ ante A,O,U | **Casa / Cero** |
+| D | de | /d/ dental suave | **Día** |
+| E | e | /e/ vocal media | **Estrella** |
+| F | efe | /f/ labiodental | **Flor** |
+| G | ge | /x/ ante E,I — /g/ ante A,O,U | **Gato / Gente** |
+| H | hache | **¡MUDA!** nunca se pronuncia | **Hola** |
+| I | i | /i/ vocal cerrada | **Isla** |
+| J | jota | /x/ gutural fuerte (como خ árabe) | **Jardín** |
+| K | ka | /k/ | **Kilo** |
+| L | ele | /l/ lateral | **Libro** |
+| M | eme | /m/ bilabial | **Madre** |
+| N | ene | /n/ nasal | **Noche** |
+| Ñ | eñe | /ɲ/ palatal (como "gn" en francés) | **España** |
+| O | o | /o/ vocal posterior | **Ojo** |
+| P | pe | /p/ bilabial | **Padre** |
+| Q | cu | /k/ siempre con U silenciosa | **Queso** |
+| R | ere / erre | /r/ simple o /rr/ vibrante | **Rosa / Perro** |
+| S | ese | /s/ alveolar | **Sol** |
+| T | te | /t/ dental | **Tren** |
+| U | u | /u/ vocal cerrada | **Uva** |
+| V | uve | /b/ **igual que la B** | **Vida** |
+| W | uve doble | /w/ solo en extranjerismos | **Web** |
+| X | equis | /ks/ entre vocales | **Examen** |
+| Y | i griega | /y/ palatal o vocal /i/ | **Ya** |
+| Z | zeta | /θ/ lengua entre dientes | **Zapato** |
+
+**Claves:**
+- **H** = siempre silenciosa. "Hola" = /ola/
+- **B y V** = suenan exactamente igual en España
+- **LL y Y** = mismo sonido en el español moderno
+- **C/Z** = /θ/ en España (como "th" en inglés "think")`,
+    vocabulary: [
+      { spanish: "el abecedario", dynamicLang: lang === "ar" ? "الأبجدية" : lang === "fr" ? "l'alphabet" : "the alphabet", explanation: "Las 27 letras del español" },
+      { spanish: "la vocal", dynamicLang: lang === "ar" ? "الحرف المتحرك" : lang === "fr" ? "la voyelle" : "the vowel", explanation: "A, E, I, O, U — siempre claras" },
+      { spanish: "la consonante", dynamicLang: lang === "ar" ? "الحرف الساكن" : lang === "fr" ? "la consonne" : "the consonant", explanation: "Todos los demás sonidos" },
+      { spanish: "la pronunciación", dynamicLang: lang === "ar" ? "النطق" : lang === "fr" ? "la prononciation" : "pronunciation", explanation: "Cómo se dice cada letra" },
+      { spanish: "la tilde", dynamicLang: lang === "ar" ? "علامة التشديد" : lang === "fr" ? "l'accent" : "the accent mark", explanation: "á, é, í, ó, ú — indica el acento" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cuántas letras tiene el alfabeto español?", options: ["25", "26", "27", "28"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo se pronuncia la letra H en español?", options: ["Como /h/ aspirada", "Como /j/ fuerte", "Es completamente muda", "Como /x/ gutural"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué letra del español NO existe en el francés ni en el inglés?", options: ["B", "Ñ", "C", "V"], correctIndex: 1 },
+      { type: "mcq", question: "En España, ¿cómo suena la letra Z?", options: ["/s/ como en 'sol'", "/z/ como en inglés 'zoo'", "/θ/ como en inglés 'think'", "/ts/ como en italiano"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué tienen en común la B y la V en español?", options: ["Son letras diferentes con sonidos diferentes", "Suenan exactamente igual: /b/", "La V es más suave que la B", "Solo se diferencia en escritura formal"], correctIndex: 1 }
+    ]
+  }),
+
+  "Greetings & Farewells": (lang) => ({
+    title: "Saludos y Despedidas en Español",
+    explanation: `### Saludos y Despedidas — Contexto Social Español
+
+En España, los saludos son fundamentales. La cultura española valora mucho el contacto social. Los españoles suelen darse **dos besos en las mejillas** al saludarse (excepto en entornos profesionales formales).
+
+#### Saludos según el momento del día:
+| Expresión | Uso | Respuesta habitual |
+|:---|:---|:---|
+| **¡Hola!** | Siempre (informal) | ¡Hola! / ¡Buenas! |
+| **Buenos días** | Hasta las 12:00 | Buenos días |
+| **Buenas tardes** | 12:00 — 20:00 | Buenas tardes |
+| **Buenas noches** | Después de las 20:00 | Buenas noches |
+| **¿Qué tal?** | Informal: ¿cómo estás? | Bien, ¿y tú? / Muy bien |
+| **¿Cómo estás?** | Informal (tuteo) | Bien, gracias |
+| **¿Cómo está usted?** | Formal (respeto) | Muy bien, gracias |
+
+#### Despedidas:
+| Expresión | Nivel | Contexto |
+|:---|:---|:---|
+| **¡Adiós!** | Neutro | Siempre |
+| **¡Hasta luego!** | Informal | "Hasta que nos veamos" |
+| **¡Hasta mañana!** | Informal | Cuando te verás mañana |
+| **¡Hasta pronto!** | Informal | "Nos vemos pronto" |
+| **¡Que te vaya bien!** | Amable | Desear buena suerte |
+| **¡Buenas noches!** | Formal/informal | Al despedirse de noche |
+
+**Nota cultural:** En España, "¡Buenas!" solas es una forma muy común de saludar a cualquier hora.`,
+    vocabulary: [
+      { spanish: "¡Hola!", dynamicLang: lang === "ar" ? "مرحبا!" : lang === "fr" ? "Salut!" : "Hi!", explanation: "El saludo más universal en español" },
+      { spanish: "Buenos días", dynamicLang: lang === "ar" ? "صباح الخير" : lang === "fr" ? "Bonjour" : "Good morning", explanation: "Se usa hasta el mediodía" },
+      { spanish: "Buenas tardes", dynamicLang: lang === "ar" ? "مساء الخير" : lang === "fr" ? "Bon après-midi" : "Good afternoon", explanation: "De 12:00 a 20:00" },
+      { spanish: "Buenas noches", dynamicLang: lang === "ar" ? "مساء النور / تصبح على خير" : lang === "fr" ? "Bonsoir / Bonne nuit" : "Good evening / Good night", explanation: "Saludo y despedida nocturna" },
+      { spanish: "¿Qué tal?", dynamicLang: lang === "ar" ? "كيف حالك؟" : lang === "fr" ? "Comment ça va?" : "How are you?", explanation: "Informal, muy usado entre amigos" },
+      { spanish: "¡Hasta luego!", dynamicLang: lang === "ar" ? "إلى اللقاء!" : lang === "fr" ? "À bientôt!" : "See you later!", explanation: "Despedida informal y frecuente" }
+    ],
+    practice: [
+      { type: "mcq", question: "Son las 9 de la mañana. ¿Qué saludo usas?", options: ["Buenas tardes", "Buenas noches", "Buenos días", "Hasta luego"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo se dice 'See you tomorrow' en español?", options: ["¡Hasta luego!", "¡Hasta mañana!", "¡Adiós!", "¡Que te vaya bien!"], correctIndex: 1 },
+      { type: "mcq", question: "Estás en una reunión formal con tu profesor universitario. ¿Cuál usas?", options: ["¿Qué tal, tío?", "¡Hola, buenas!", "¿Cómo está usted?", "¿Qué pasa?"], correctIndex: 2 },
+      { type: "mcq", question: "Un compañero te dice '¿Qué tal?' ¿Cuál es la respuesta más natural?", options: ["Buenas noches", "Bien, ¿y tú?", "Hasta pronto", "Por favor"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál de estas es una despedida?", options: ["Buenos días", "¿Cómo estás?", "¡Hasta pronto!", "¿Qué tal?"], correctIndex: 2 }
+    ]
+  }),
+
+  "Introducing Yourself & Age": (lang) => ({
+    title: "Presentarse y Hablar de la Edad",
+    explanation: `### Cómo Presentarse en Español
+
+Al llegar a España como estudiante, te presentarás constantemente: en la universidad, en residencias, en oficinas. Dominar estas frases es esencial.
+
+#### Fórmula básica de presentación:
+\`\`\`
+Me llamo [nombre]. / Mi nombre es [nombre].
+Soy de [país/ciudad].
+Tengo [número] años.
+Estudio [carrera] en [universidad].
+\`\`\`
+
+#### Verbos clave:
+| Verbo | Yo | Tú | Él/Ella |
+|:---|:---|:---|:---|
+| **llamarse** (to be called) | me llamo | te llamas | se llama |
+| **ser** (to be) | soy | eres | es |
+| **tener** (to have/age) | tengo | tienes | tiene |
+| **vivir** (to live) | vivo | vives | vive |
+| **estudiar** (to study) | estudio | estudias | estudia |
+
+#### Expresar la edad en español:
+⚠️ **Diferencia clave:** En español se usa **TENER** para la edad, no SER.
+- ✅ **Tengo 22 años.** (I am 22 years old)
+- ❌ ~~Soy 22 años.~~ (INCORRECTO)
+- ❌ ~~Estoy 22 años.~~ (INCORRECTO)
+
+#### Preguntas frecuentes:
+- **¿Cómo te llamas?** — ¿Cuál es tu nombre?
+- **¿De dónde eres?** — ¿Cuál es tu país/ciudad?
+- **¿Cuántos años tienes?** — ¿Qué edad tienes?
+- **¿A qué te dedicas?** — ¿Qué haces? ¿Trabajas o estudias?`,
+    vocabulary: [
+      { spanish: "Me llamo...", dynamicLang: lang === "ar" ? "اسمي..." : lang === "fr" ? "Je m'appelle..." : "My name is...", explanation: "La forma más natural de presentarse" },
+      { spanish: "Soy de...", dynamicLang: lang === "ar" ? "أنا من..." : lang === "fr" ? "Je suis de..." : "I am from...", explanation: "Para indicar tu origen" },
+      { spanish: "Tengo ... años", dynamicLang: lang === "ar" ? "عمري ... سنة" : lang === "fr" ? "J'ai ... ans" : "I am ... years old", explanation: "TENER, no SER, para la edad" },
+      { spanish: "Estudio en...", dynamicLang: lang === "ar" ? "أدرس في..." : lang === "fr" ? "J'étudie à..." : "I study at...", explanation: "Para hablar de tu universidad" },
+      { spanish: "Encantado/a", dynamicLang: lang === "ar" ? "تشرفت بمعرفتك" : lang === "fr" ? "Enchanté(e)" : "Nice to meet you", explanation: "Al conocer a alguien nuevo" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cuál es la forma correcta de decir tu edad?", options: ["Soy 20 años", "Estoy 20 años", "Tengo 20 años", "Hay 20 años"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo preguntas el nombre de alguien formalmente?", options: ["¿Cómo te llamas?", "¿Cómo se llama usted?", "¿Qué eres?", "¿Cómo estás?"], correctIndex: 1 },
+      { type: "mcq", question: "Completa: 'Soy ___ Marruecos'", options: ["a", "de", "en", "por"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál significa 'Nice to meet you'?", options: ["Hasta luego", "Buenos días", "Encantado", "Perdona"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cuál es correcto para 'I study medicine'?", options: ["Estudio medicina", "Soy medicina", "Tengo medicina", "Hablo medicina"], correctIndex: 0 }
+    ]
+  }),
+
+  "Numbers 1 to 100 & Telling Time": (lang) => ({
+    title: "Los Números y la Hora en Español",
+    explanation: `### Números del 1 al 100
+
+#### Del 1 al 20 (memorizar):
+1-uno, 2-dos, 3-tres, 4-cuatro, 5-cinco, 6-seis, 7-siete, 8-ocho, 9-nueve, 10-diez
+11-once, 12-doce, 13-trece, 14-catorce, 15-quince, 16-dieciséis, 17-diecisiete, 18-dieciocho, 19-diecinueve, 20-veinte
+
+#### Del 20 al 100 (reglas):
+| Decena | Regla | Ejemplo |
+|:---|:---|:---|
+| 20 | veinte | — |
+| 21-29 | veinti + uno/dos... | veintiuno, veintidós |
+| 30 | treinta | treinta y uno (31) |
+| 40 | cuarenta | cuarenta y cinco (45) |
+| 50 | cincuenta | cincuenta y tres (53) |
+| 60 | sesenta | sesenta y ocho (68) |
+| 70 | setenta | setenta y dos (72) |
+| 80 | ochenta | ochenta y nueve (89) |
+| 90 | noventa | noventa y siete (97) |
+| 100 | cien | — |
+
+#### La Hora:
+| Expresión | Ejemplo |
+|:---|:---|
+| **¿Qué hora es?** | What time is it? |
+| **Son las + hora** | Son las tres (3:00) |
+| **Es la una** | Solo para la 1:00 |
+| **y cuarto** | + 15 minutos |
+| **y media** | + 30 minutos |
+| **menos cuarto** | — 15 minutos |
+
+**Ejemplos:**
+- 3:15 → Son las tres **y cuarto**
+- 3:30 → Son las tres **y media**
+- 3:45 → Son las cuatro **menos cuarto**
+- 1:00 → **Es la** una`,
+    vocabulary: [
+      { spanish: "¿Qué hora es?", dynamicLang: lang === "ar" ? "كم الساعة؟" : lang === "fr" ? "Quelle heure est-il?" : "What time is it?", explanation: "Pregunta fundamental para el día a día" },
+      { spanish: "Son las...", dynamicLang: lang === "ar" ? "الساعة..." : lang === "fr" ? "Il est..." : "It is...", explanation: "Para todas las horas excepto la 1:00" },
+      { spanish: "y media", dynamicLang: lang === "ar" ? "والنصف" : lang === "fr" ? "et demie" : "and a half / thirty", explanation: "Para indicar los 30 minutos" },
+      { spanish: "y cuarto", dynamicLang: lang === "ar" ? "والربع" : lang === "fr" ? "et quart" : "quarter past", explanation: "Para indicar los 15 minutos" },
+      { spanish: "menos cuarto", dynamicLang: lang === "ar" ? "إلا ربع" : lang === "fr" ? "moins le quart" : "quarter to", explanation: "15 minutos antes de la hora" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cómo se dice '45' en español?", options: ["cuarenta y cuatro", "cuarenta y cinco", "cincuenta y cinco", "cuarenta y seis"], correctIndex: 1 },
+      { type: "mcq", question: "Son las 3:30. ¿Cómo lo dices?", options: ["Son las tres menos media", "Son las tres y media", "Es la tres y media", "Son las tres y cuarto"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuándo usas 'Es la...' en vez de 'Son las...'?", options: ["Para las 12:00", "Para la 1:00", "Para las 2:00", "Para las 10:00"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cómo se dice '100'?", options: ["ciento", "cien", "cientos", "un cien"], correctIndex: 1 },
+      { type: "mcq", question: "Son las 4 menos cuarto. ¿Qué hora es?", options: ["4:45", "3:45", "4:15", "3:15"], correctIndex: 1 }
+    ]
+  }),
+
+  "Family Members & Relationships": (lang) => ({
+    title: "La Familia y las Relaciones",
+    explanation: `### La Familia en Español
+
+#### Vocabulario familiar esencial:
+| Español | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} | Plural |
+|:---|:---|:---|
+| el padre | ${lang === "ar" ? "الأب" : lang === "fr" ? "le père" : "father"} | los padres |
+| la madre | ${lang === "ar" ? "الأم" : lang === "fr" ? "la mère" : "mother"} | las madres |
+| el hijo | ${lang === "ar" ? "الابن" : lang === "fr" ? "le fils" : "son"} | los hijos |
+| la hija | ${lang === "ar" ? "البنت" : lang === "fr" ? "la fille" : "daughter"} | las hijas |
+| el hermano | ${lang === "ar" ? "الأخ" : lang === "fr" ? "le frère" : "brother"} | los hermanos |
+| la hermana | ${lang === "ar" ? "الأخت" : lang === "fr" ? "la sœur" : "sister"} | las hermanas |
+| el abuelo | ${lang === "ar" ? "الجد" : lang === "fr" ? "le grand-père" : "grandfather"} | los abuelos |
+| la abuela | ${lang === "ar" ? "الجدة" : lang === "fr" ? "la grand-mère" : "grandmother"} | las abuelas |
+| el tío | ${lang === "ar" ? "العم/الخال" : lang === "fr" ? "l'oncle" : "uncle"} | los tíos |
+| la tía | ${lang === "ar" ? "العمة/الخالة" : lang === "fr" ? "la tante" : "aunt"} | las tías |
+| el primo | ${lang === "ar" ? "ابن العم/الخال" : lang === "fr" ? "le cousin" : "cousin (m)"} | los primos |
+| el marido / esposo | ${lang === "ar" ? "الزوج" : lang === "fr" ? "le mari" : "husband"} | — |
+| la mujer / esposa | ${lang === "ar" ? "الزوجة" : lang === "fr" ? "la femme" : "wife"} | — |
+
+#### Nota gramatical importante:
+En español, el plural masculino incluye ambos géneros:
+- **los padres** = el padre + la madre (padre Y madre)
+- **los hermanos** = hermanos + hermanas (todos)
+- **los abuelos** = abuelo + abuela`,
+    vocabulary: [
+      { spanish: "la familia", dynamicLang: lang === "ar" ? "العائلة" : lang === "fr" ? "la famille" : "the family", explanation: "Grupo familiar completo" },
+      { spanish: "los padres", dynamicLang: lang === "ar" ? "الوالدان" : lang === "fr" ? "les parents" : "parents", explanation: "Padre + madre juntos" },
+      { spanish: "el hermano mayor", dynamicLang: lang === "ar" ? "الأخ الأكبر" : lang === "fr" ? "le frère aîné" : "older brother", explanation: "Mayor = mayor en edad" },
+      { spanish: "el hijo único", dynamicLang: lang === "ar" ? "الابن الوحيد" : lang === "fr" ? "l'enfant unique" : "only child", explanation: "Sin hermanos ni hermanas" },
+      { spanish: "los suegros", dynamicLang: lang === "ar" ? "الحماة" : lang === "fr" ? "les beaux-parents" : "in-laws", explanation: "Padres del esposo/esposa" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cómo se llama el padre de tu madre?", options: ["el tío", "el abuelo", "el suegro", "el primo"], correctIndex: 1 },
+      { type: "mcq", question: "'Los hermanos' en español significa:", options: ["Solo los hermanos varones", "Hermanos y hermanas juntos", "Solo las hermanas", "Los primos"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cómo se dice 'wife' en español?", options: ["la novia", "la madre", "la esposa", "la hermana"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué es 'el primo'?", options: ["el hermano", "el tío", "el hijo del tío o la tía", "el suegro"], correctIndex: 2 },
+      { type: "mcq", question: "'Los abuelos' significa:", options: ["Solo el abuelo", "El abuelo y la abuela", "Los padres", "Los tíos"], correctIndex: 1 }
+    ]
+  }),
+
+  "Noun Gender & Articles": (lang) => ({
+    title: "El Género y los Artículos en Español",
+    explanation: `### Género de los Sustantivos y Artículos
+
+En español, **todos los sustantivos tienen género** (masculino o femenino). Este es uno de los aspectos más importantes de la gramática española.
+
+#### Artículos en español:
+| | Masculino | Femenino |
+|:---|:---:|:---:|
+| **Definido singular** | el | la |
+| **Definido plural** | los | las |
+| **Indefinido singular** | un | una |
+| **Indefinido plural** | unos | unas |
+
+#### Reglas para identificar el género:
+✅ **Generalmente MASCULINO si termina en:**
+- **-o**: el libro, el chico, el año
+- **-or**: el color, el profesor, el calor
+- **-aje**: el viaje, el garaje, el mensaje
+
+✅ **Generalmente FEMENINO si termina en:**
+- **-a**: la casa, la chica, la mesa
+- **-ión**: la canción, la nación, la situación
+- **-dad/-tad**: la ciudad, la libertad, la universidad
+- **-ez**: la vez, la vejez
+
+⚠️ **Excepciones importantes:**
+- el día (masculino, termina en -a)
+- el mapa (masculino, termina en -a)
+- la mano (femenino, termina en -o)
+- el problema, el tema, el sistema (masculinos, -ma)
+
+#### Contracción obligatoria:
+- **a + el = AL**: Voy **al** supermercado
+- **de + el = DEL**: Vengo **del** aeropuerto`,
+    vocabulary: [
+      { spanish: "el artículo", dynamicLang: lang === "ar" ? "أداة التعريف/التنكير" : lang === "fr" ? "l'article" : "the article", explanation: "el/la/los/las — un/una/unos/unas" },
+      { spanish: "masculino", dynamicLang: lang === "ar" ? "مذكر" : lang === "fr" ? "masculin" : "masculine", explanation: "Género: el, un" },
+      { spanish: "femenino", dynamicLang: lang === "ar" ? "مؤنث" : lang === "fr" ? "féminin" : "feminine", explanation: "Género: la, una" },
+      { spanish: "la universidad", dynamicLang: lang === "ar" ? "الجامعة" : lang === "fr" ? "l'université" : "the university", explanation: "Termina en -dad → femenino" },
+      { spanish: "el problema", dynamicLang: lang === "ar" ? "المشكلة" : lang === "fr" ? "le problème" : "the problem", explanation: "Excepción: -ma pero masculino" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cuál es el artículo correcto para 'ciudad'?", options: ["el", "la", "un", "los"], correctIndex: 1 },
+      { type: "mcq", question: "Completa: 'Voy ___ supermercado'", options: ["a el", "al", "del", "a la"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es MASCULINO?", options: ["la mano", "la flor", "el día", "la ciudad"], correctIndex: 2 },
+      { type: "mcq", question: "'La situación' es femenino porque termina en:", options: ["-a", "-ión", "-dad", "-ez"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es el plural de 'el estudiante'?", options: ["las estudiantes", "los estudiantes", "unos estudiante", "el estudiantes"], correctIndex: 1 }
+    ]
+  }),
+
+  "SER vs ESTAR — To Be": (lang) => ({
+    title: "SER vs ESTAR — Los Dos Verbos 'To Be'",
+    explanation: `### SER vs ESTAR — La Distinción Fundamental
+
+Este es el concepto más difícil para estudiantes árabes y francófonos, porque en árabe y en francés existe solo **un** verbo equivalente. En español hay **DOS**.
+
+#### SER — Características permanentes o esenciales:
+| Uso | Ejemplo |
+|:---|:---|
+| **Identidad/nombre** | Yo **soy** Ahmed |
+| **Origen/nacionalidad** | **Soy** de Marruecos. **Soy** marroquí |
+| **Profesión** | **Soy** estudiante / médico |
+| **Características físicas permanentes** | **Es** alto. **Es** morena |
+| **Material** | La mesa **es** de madera |
+| **Tiempo/fecha** | **Son** las tres. **Es** lunes |
+| **Con adjetivos de carácter** | **Es** inteligente, simpático |
+
+#### ESTAR — Estados temporales o posiciones:
+| Uso | Ejemplo |
+|:---|:---|
+| **Ubicación** | **Estoy** en Madrid |
+| **Estado de salud** | **Estoy** bien / enfermo |
+| **Estado emocional** | **Estoy** cansado, contento |
+| **Estado temporal** | La ventana **está** abierta |
+| **Acciones en progreso** | **Estoy** estudiando |
+
+#### Tabla de conjugación (Presente):
+| Pronombre | SER | ESTAR |
+|:---:|:---:|:---:|
+| yo | **soy** | **estoy** |
+| tú | **eres** | **estás** |
+| él/ella | **es** | **está** |
+| nosotros | **somos** | **estamos** |
+| vosotros | **sois** | **estáis** |
+| ellos/ellas | **son** | **están** |
+
+⚠️ **Adjetivos que cambian de significado:**
+- **ser aburrido** = ser una persona aburrida (carácter)
+- **estar aburrido** = sentirse aburrido ahora mismo (estado)`,
+    vocabulary: [
+      { spanish: "ser", dynamicLang: lang === "ar" ? "يكون (دائم)" : lang === "fr" ? "être (permanent)" : "to be (permanent)", explanation: "Para identidad, origen, esencia" },
+      { spanish: "estar", dynamicLang: lang === "ar" ? "يكون (مؤقت/موضع)" : lang === "fr" ? "être (temporaire/lieu)" : "to be (temporary/location)", explanation: "Para estado, ubicación, emoción" },
+      { spanish: "soy de Marruecos", dynamicLang: lang === "ar" ? "أنا من المغرب" : lang === "fr" ? "Je suis du Maroc" : "I am from Morocco", explanation: "SER para el origen" },
+      { spanish: "estoy en Madrid", dynamicLang: lang === "ar" ? "أنا في مدريد" : lang === "fr" ? "Je suis à Madrid" : "I am in Madrid", explanation: "ESTAR para la ubicación" },
+      { spanish: "estoy cansado", dynamicLang: lang === "ar" ? "أنا متعب" : lang === "fr" ? "Je suis fatigué" : "I am tired", explanation: "ESTAR para estado emocional/físico" }
+    ],
+    practice: [
+      { type: "mcq", question: "Ahmed ___ estudiante de medicina.", options: ["está", "es", "son", "estás"], correctIndex: 1 },
+      { type: "mcq", question: "La biblioteca ___ cerrada hoy.", options: ["es", "ser", "está", "somos"], correctIndex: 2 },
+      { type: "mcq", question: "¿Dónde ___ la facultad de derecho?", options: ["es", "son", "está", "estoy"], correctIndex: 2 },
+      { type: "mcq", question: "Mis padres ___ de Casablanca.", options: ["están", "estamos", "son", "eres"], correctIndex: 2 },
+      { type: "mcq", question: "Hoy ___ lunes, 15 de octubre.", options: ["está", "estoy", "es", "somos"], correctIndex: 2 }
+    ]
+  }),
+
+  "Regular -AR Verbs: Hablar, Estudiar": (lang) => ({
+    title: "Los Verbos Regulares en -AR",
+    explanation: `### Verbos Regulares en -AR — Presente de Indicativo
+
+Los verbos en -AR son los más numerosos en español. Una vez que dominas este patrón, puedes conjugar cientos de verbos.
+
+#### Regla: Quitar -AR y añadir las terminaciones:
+| Pronombre | Terminación | HABLAR | ESTUDIAR | TRABAJAR |
+|:---:|:---:|:---:|:---:|:---:|
+| yo | **-o** | habl**o** | estudi**o** | trabaj**o** |
+| tú | **-as** | habl**as** | estudi**as** | trabaj**as** |
+| él/ella | **-a** | habl**a** | estudi**a** | trabaj**a** |
+| nosotros | **-amos** | habl**amos** | estudi**amos** | trabaj**amos** |
+| vosotros | **-áis** | habl**áis** | estudi**áis** | trabaj**áis** |
+| ellos | **-an** | habl**an** | estudi**an** | trabaj**an** |
+
+#### Verbos -AR esenciales para estudiantes:
+- **estudiar** = estudiar
+- **hablar** = hablar
+- **trabajar** = trabajar
+- **escuchar** = escuchar
+- **preguntar** = preguntar
+- **necesitar** = necesitar
+- **llegar** = llegar (a la universidad)
+- **buscar** = buscar (información)
+- **llamar** = llamar (por teléfono)
+- **mandar** = enviar (correos)
+
+#### Frases prácticas:
+- **Estudio** ingeniería en la UPM.
+- **Necesito** matricularme este mes.
+- **Busco** piso compartido en Madrid.
+- **Llamo** a la secretaría para preguntar.`,
+    vocabulary: [
+      { spanish: "hablar", dynamicLang: lang === "ar" ? "يتحدث" : lang === "fr" ? "parler" : "to speak", explanation: "Verbo modelo de la conjugación -AR" },
+      { spanish: "estudiar", dynamicLang: lang === "ar" ? "يدرس" : lang === "fr" ? "étudier" : "to study", explanation: "Verbo clave para universitarios" },
+      { spanish: "necesitar", dynamicLang: lang === "ar" ? "يحتاج" : lang === "fr" ? "avoir besoin de" : "to need", explanation: "Necesito + infinitivo" },
+      { spanish: "buscar", dynamicLang: lang === "ar" ? "يبحث" : lang === "fr" ? "chercher" : "to look for", explanation: "Busco piso / Busco trabajo" },
+      { spanish: "llegar", dynamicLang: lang === "ar" ? "يصل" : lang === "fr" ? "arriver" : "to arrive", explanation: "¿A qué hora llegas a clase?" }
+    ],
+    practice: [
+      { type: "mcq", question: "Yo ___ español todos los días.", options: ["estudias", "estudio", "estudia", "estudiamos"], correctIndex: 1 },
+      { type: "mcq", question: "Ella ___ en una cafetería.", options: ["trabajo", "trabajas", "trabajamos", "trabaja"], correctIndex: 3 },
+      { type: "mcq", question: "Nosotros ___ a la universidad a las 8.", options: ["llegan", "llego", "llegamos", "llegas"], correctIndex: 2 },
+      { type: "mcq", question: "¿Tú ___ árabe?", options: ["habla", "hablo", "hablas", "hablan"], correctIndex: 2 },
+      { type: "mcq", question: "Los estudiantes ___ información en internet.", options: ["busco", "buscas", "busca", "buscan"], correctIndex: 3 }
+    ]
+  }),
+
+  "Daily Activities & Routines": (lang) => ({
+    title: "Las Actividades Diarias y las Rutinas",
+    explanation: `### La Rutina Diaria — Vocabulario y Expresiones
+
+#### Verbos reflexivos de la rutina:
+Los verbos reflexivos indican que la acción recae sobre uno mismo. Se conjugan con pronombres reflexivos.
+
+| Infinitivo | Yo | Tú | Él/Ella |
+|:---|:---:|:---:|:---:|
+| **despertarse** (wake up) | me despierto | te despiertas | se despierta |
+| **levantarse** (get up) | me levanto | te levantas | se levanta |
+| **ducharse** (shower) | me ducho | te duchas | se ducha |
+| **vestirse** (get dressed) | me visto | te vistes | se viste |
+| **acostarse** (go to bed) | me acuesto | te acuestas | se acuesta |
+| **dormirse** (fall asleep) | me duermo | te duermes | se duerme |
+
+#### Expresiones de frecuencia:
+- **siempre** = always
+- **normalmente** = normally
+- **a veces** = sometimes
+- **nunca** = never
+- **todos los días** = every day
+- **los lunes** = on Mondays
+
+#### Mi rutina de estudiante:
+Me despierto a las 7:00. Me ducho y desayuno. Llego a la facultad a las 8:30. Estudio hasta las 14:00. Como en la cafetería. Por la tarde, voy a la biblioteca. Me acuesto a las 23:00.`,
+    vocabulary: [
+      { spanish: "despertarse", dynamicLang: lang === "ar" ? "يستيقظ" : lang === "fr" ? "se réveiller" : "to wake up", explanation: "Me despierto a las 7" },
+      { spanish: "ducharse", dynamicLang: lang === "ar" ? "يستحم" : lang === "fr" ? "se doucher" : "to shower", explanation: "Me ducho por la mañana" },
+      { spanish: "desayunar", dynamicLang: lang === "ar" ? "يتناول الفطور" : lang === "fr" ? "prendre le petit-déjeuner" : "to have breakfast", explanation: "La primera comida del día" },
+      { spanish: "acostarse", dynamicLang: lang === "ar" ? "يذهب للنوم" : lang === "fr" ? "se coucher" : "to go to bed", explanation: "Me acuesto a medianoche" },
+      { spanish: "todos los días", dynamicLang: lang === "ar" ? "كل يوم" : lang === "fr" ? "tous les jours" : "every day", explanation: "Expresión de frecuencia diaria" }
+    ],
+    practice: [
+      { type: "mcq", question: "Yo ___ a las 7 de la mañana.", options: ["me despierta", "te despiertas", "me despierto", "se despierta"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué significa 'a veces'?", options: ["always", "never", "sometimes", "every day"], correctIndex: 2 },
+      { type: "mcq", question: "Ella ___ a las 11 de la noche.", options: ["me acuesto", "se acuesta", "te acuestas", "nos acostamos"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál viene primero en la mañana?", options: ["acostarse", "despertarse", "ducharse", "comer"], correctIndex: 1 },
+      { type: "mcq", question: "Completa: 'Siempre ___  el desayuno a las 8'", options: ["como", "comes", "come", "comemos"], correctIndex: 0 }
+    ]
+  }),
+
+  "Ordering Food & Cafe Vocabulary": (lang) => ({
+    title: "Pedir en un Café o Restaurante",
+    explanation: `### En el Café y el Restaurante — Vocabulario Esencial
+
+En España, el café y el restaurante son espacios sociales fundamentales. Como estudiante, comerás frecuentemente fuera de casa.
+
+#### Vocabulario de bebidas:
+| Español | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} |
+|:---|:---|
+| un café solo | ${lang === "ar" ? "قهوة سوداء" : lang === "fr" ? "un expresso" : "an espresso"} |
+| un café con leche | ${lang === "ar" ? "قهوة بالحليب" : lang === "fr" ? "un café au lait" : "coffee with milk"} |
+| un cortado | ${lang === "ar" ? "قهوة بقليل من الحليب" : lang === "fr" ? "un café noisette" : "espresso with a splash of milk"} |
+| un zumo de naranja | ${lang === "ar" ? "عصير برتقال" : lang === "fr" ? "un jus d'orange" : "orange juice"} |
+| una cerveza | ${lang === "ar" ? "بيرة" : lang === "fr" ? "une bière" : "a beer"} |
+| el agua | ${lang === "ar" ? "الماء" : lang === "fr" ? "l'eau" : "water"} |
+
+#### Frases para pedir:
+- **¿Me pone...?** / **¿Me pones...?** = Can I have...?
+- **Quiero/Quisiera...** = I'd like...
+- **¿Qué recomienda?** = What do you recommend?
+- **La cuenta, por favor** = The bill, please
+- **¿Está incluido el servicio?** = Is service included?
+
+#### El menú del día (muy español):
+En España, muchos restaurantes ofrecen el **menú del día** al mediodía (aprox. 10-12€): primer plato + segundo plato + postre + bebida + pan. ¡Es la opción más económica para estudiantes!`,
+    vocabulary: [
+      { spanish: "¿Me pone un café?", dynamicLang: lang === "ar" ? "هل يمكنني قهوة؟" : lang === "fr" ? "Un café, s'il vous plaît?" : "Can I have a coffee?", explanation: "Forma más española de pedir" },
+      { spanish: "la carta", dynamicLang: lang === "ar" ? "قائمة الطعام" : lang === "fr" ? "la carte" : "the menu", explanation: "¿Me trae la carta, por favor?" },
+      { spanish: "el menú del día", dynamicLang: lang === "ar" ? "طبق اليوم" : lang === "fr" ? "le menu du jour" : "today's set menu", explanation: "La opción más económica: ~10-12€" },
+      { spanish: "la cuenta", dynamicLang: lang === "ar" ? "الفاتورة" : lang === "fr" ? "l'addition" : "the bill", explanation: "La cuenta, por favor" },
+      { spanish: "la propina", dynamicLang: lang === "ar" ? "الإكرامية" : lang === "fr" ? "le pourboire" : "the tip", explanation: "En España no es obligatoria" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cómo pides la cuenta en español?", options: ["¿Qué hay?", "La cuenta, por favor", "¿Me pone un café?", "¿Qué recomienda?"], correctIndex: 1 },
+      { type: "mcq", question: "Un café solo en España es:", options: ["café con leche y azúcar", "un expresso sin leche", "café con mucha leche", "té negro"], correctIndex: 1 },
+      { type: "mcq", question: "¿Qué incluye típicamente el menú del día?", options: ["Solo el primer plato", "Solo el postre", "Primer plato, segundo, postre y bebida", "Solo bebida y postre"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo se dice 'orange juice'?", options: ["zumo de manzana", "zumo de naranja", "agua con gas", "refresco"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cómo se pide formalmente algo en un restaurante?", options: ["Dame esto", "Quiero esto", "Quisiera el menú del día, por favor", "Ponme algo"], correctIndex: 2 }
+    ]
+  }),
+
+  "Weather & Seasons": (lang) => ({
+    title: "El Tiempo y las Estaciones",
+    explanation: `### El Tiempo Atmosférico y las Estaciones
+
+#### Las cuatro estaciones:
+| Español | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} | Meses |
+|:---|:---|:---|
+| la primavera | ${lang === "ar" ? "الربيع" : lang === "fr" ? "le printemps" : "spring"} | marzo-mayo |
+| el verano | ${lang === "ar" ? "الصيف" : lang === "fr" ? "l'été" : "summer"} | junio-agosto |
+| el otoño | ${lang === "ar" ? "الخريف" : lang === "fr" ? "l'automne" : "autumn"} | sept.-noviembre |
+| el invierno | ${lang === "ar" ? "الشتاء" : lang === "fr" ? "l'hiver" : "winter"} | dic.-febrero |
+
+#### ¿Qué tiempo hace? (Hacer es el verbo clave)
+| Expresión | Significado |
+|:---|:---|
+| **Hace calor** | It's hot |
+| **Hace frío** | It's cold |
+| **Hace sol** | It's sunny |
+| **Hace viento** | It's windy |
+| **Hace buen tiempo** | The weather is nice |
+| **Hace mal tiempo** | The weather is bad |
+| **Llueve / Está lloviendo** | It rains / It's raining |
+| **Nieva** | It snows |
+| **Está nublado** | It's cloudy |
+
+#### El tiempo en España:
+- **Madrid**: veranos muy calientes (40°C+), inviernos fríos
+- **Barcelona**: clima mediterráneo suave
+- **Sevilla**: la ciudad más caliente de Europa en verano
+- **Bilbao**: llueve mucho, verde todo el año`,
+    vocabulary: [
+      { spanish: "¿Qué tiempo hace?", dynamicLang: lang === "ar" ? "كيف الطقس؟" : lang === "fr" ? "Quel temps fait-il?" : "What's the weather like?", explanation: "La pregunta estándar sobre el tiempo" },
+      { spanish: "hace calor", dynamicLang: lang === "ar" ? "الجو حار" : lang === "fr" ? "il fait chaud" : "it's hot", explanation: "HACER + temperatura o tiempo" },
+      { spanish: "llueve", dynamicLang: lang === "ar" ? "تمطر" : lang === "fr" ? "il pleut" : "it rains", explanation: "Verbo llover — verbo impersonal" },
+      { spanish: "el paraguas", dynamicLang: lang === "ar" ? "المظلة" : lang === "fr" ? "le parapluie" : "the umbrella", explanation: "Necesario en el norte de España" },
+      { spanish: "la temperatura", dynamicLang: lang === "ar" ? "درجة الحرارة" : lang === "fr" ? "la température" : "the temperature", explanation: "La temperatura máxima hoy es 35°C" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cómo se dice 'It's sunny'?", options: ["Hace frío", "Hace sol", "Llueve", "Está nublado"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es el verbo principal para hablar del tiempo?", options: ["ser", "estar", "hacer", "tener"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué meses son el verano en España?", options: ["Dic-Feb", "Mar-May", "Jun-Ago", "Sep-Nov"], correctIndex: 2 },
+      { type: "mcq", question: "En invierno en Madrid, ¿qué tiempo hace?", options: ["Hace mucho calor", "Hace frío", "Hace sol siempre", "Llueve todos los días"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cómo se dice 'it's raining' (ahora mismo)?", options: ["Llueve", "Está lloviendo", "Hizo lluvia", "Hay lluvia"], correctIndex: 1 }
+    ]
+  }),
+
+  "Colors & Clothing": (lang) => ({
+    title: "Los Colores y la Ropa",
+    explanation: `### Los Colores y la Ropa en Español
+
+#### Los colores — y concordancia:
+En español, los adjetivos (incluidos los colores) **concuerdan** en género y número con el sustantivo.
+
+| Color | Masculino | Femenino | Plural |
+|:---|:---:|:---:|:---:|
+| rojo (red) | el bolso rojo | la camisa roja | los zapatos rojos |
+| azul (blue) | el pantalón azul | la chaqueta azul | los calcetines azules |
+| verde (green) | el jersey verde | la falda verde | los pantalones verdes |
+| negro (black) | el abrigo negro | la camiseta negra | las botas negras |
+| blanco (white) | el polo blanco | la camiseta blanca | los guantes blancos |
+| amarillo (yellow) | el impermeable amarillo | la bufanda amarilla | — |
+| naranja (orange) | invariable | naranja | naranjas |
+
+#### Vocabulario de ropa esencial:
+| Ropa | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} |
+|:---|:---|
+| la camiseta | ${lang === "ar" ? "التيشيرت" : lang === "fr" ? "le t-shirt" : "t-shirt"} |
+| el pantalón | ${lang === "ar" ? "البنطلون" : lang === "fr" ? "le pantalon" : "trousers"} |
+| los zapatos | ${lang === "ar" ? "الحذاء" : lang === "fr" ? "les chaussures" : "shoes"} |
+| el abrigo | ${lang === "ar" ? "المعطف" : lang === "fr" ? "le manteau" : "coat"} |
+| la chaqueta | ${lang === "ar" ? "الجاكيت" : lang === "fr" ? "la veste" : "jacket"} |
+| las zapatillas | ${lang === "ar" ? "حذاء رياضي" : lang === "fr" ? "les baskets" : "sneakers"} |`,
+    vocabulary: [
+      { spanish: "rojo/roja", dynamicLang: lang === "ar" ? "أحمر/حمراء" : lang === "fr" ? "rouge" : "red", explanation: "Concuerda con el género del sustantivo" },
+      { spanish: "los zapatos", dynamicLang: lang === "ar" ? "الأحذية" : lang === "fr" ? "les chaussures" : "shoes", explanation: "Siempre en plural en español" },
+      { spanish: "llevar puesto", dynamicLang: lang === "ar" ? "يرتدي" : lang === "fr" ? "porter (vêtement)" : "to wear", explanation: "Llevo puesta una chaqueta azul" },
+      { spanish: "la talla", dynamicLang: lang === "ar" ? "المقاس" : lang === "fr" ? "la taille" : "the size", explanation: "¿Qué talla usas? — S, M, L, XL" },
+      { spanish: "la tienda de ropa", dynamicLang: lang === "ar" ? "محل الملابس" : lang === "fr" ? "le magasin de vêtements" : "clothing store", explanation: "Zara, H&M, Primark son populares en España" }
+    ],
+    practice: [
+      { type: "mcq", question: "La camisa ___ (rojo)", options: ["rojo", "rojas", "roja", "rojos"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo se dice 'I'm wearing a blue jacket'?", options: ["Tengo una chaqueta azul", "Llevo puesta una chaqueta azul", "Soy una chaqueta azul", "Estoy una chaqueta azul"], correctIndex: 1 },
+      { type: "mcq", question: "Los pantalones ___ (negro)", options: ["negros", "negra", "negro", "negras"], correctIndex: 0 },
+      { type: "mcq", question: "¿Qué color es invariable (no cambia)?", options: ["rojo", "blanco", "naranja", "negro"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo preguntas la talla en una tienda?", options: ["¿Cuánto cuesta?", "¿Qué talla usas?", "¿De qué color?", "¿Dónde está?"], correctIndex: 1 }
+    ]
+  }),
+
+  "Describing Places & Directions": (lang) => ({
+    title: "Describir Lugares y Pedir Direcciones",
+    explanation: `### Lugares y Direcciones en España
+
+#### Vocabulario de lugares urbanos:
+| Lugar | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} |
+|:---|:---|
+| la facultad | ${lang === "ar" ? "الكلية" : lang === "fr" ? "la faculté" : "faculty/school"} |
+| la biblioteca | ${lang === "ar" ? "المكتبة" : lang === "fr" ? "la bibliothèque" : "library"} |
+| la residencia | ${lang === "ar" ? "المقيم الطلابي" : lang === "fr" ? "la résidence" : "student dorm"} |
+| el ayuntamiento | ${lang === "ar" ? "البلدية" : lang === "fr" ? "la mairie" : "town hall"} |
+| la comisaría | ${lang === "ar" ? "مركز الشرطة" : lang === "fr" ? "le commissariat" : "police station"} |
+| la farmacia | ${lang === "ar" ? "الصيدلية" : lang === "fr" ? "la pharmacie" : "pharmacy"} |
+| el metro | ${lang === "ar" ? "المترو" : lang === "fr" ? "le métro" : "subway"} |
+
+#### Pedir y dar direcciones:
+- **¿Dónde está...?** = Where is...?
+- **¿Cómo llego a...?** = How do I get to...?
+- **Todo recto** = Straight ahead
+- **Gira a la derecha** = Turn right
+- **Gira a la izquierda** = Turn left
+- **Al final de la calle** = At the end of the street
+- **Enfrente de** = In front of
+- **Al lado de** = Next to
+- **A dos minutos a pie** = Two minutes on foot`,
+    vocabulary: [
+      { spanish: "¿Dónde está...?", dynamicLang: lang === "ar" ? "أين يوجد...؟" : lang === "fr" ? "Où est...?" : "Where is...?", explanation: "La pregunta clave para orientarse" },
+      { spanish: "todo recto", dynamicLang: lang === "ar" ? "على طول / مباشرة" : lang === "fr" ? "tout droit" : "straight ahead", explanation: "Sigue todo recto por esta calle" },
+      { spanish: "a la derecha", dynamicLang: lang === "ar" ? "على اليمين" : lang === "fr" ? "à droite" : "on the right", explanation: "Gira a la derecha en el semáforo" },
+      { spanish: "a la izquierda", dynamicLang: lang === "ar" ? "على اليسار" : lang === "fr" ? "à gauche" : "on the left", explanation: "La farmacia está a la izquierda" },
+      { spanish: "cerca / lejos", dynamicLang: lang === "ar" ? "قريب / بعيد" : lang === "fr" ? "près / loin" : "near / far", explanation: "¿Está cerca de aquí?" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cómo preguntas cómo llegar a un sitio?", options: ["¿Qué hora es?", "¿Dónde está la estación?", "¿Cuánto cuesta?", "¿Hablas inglés?"], correctIndex: 1 },
+      { type: "mcq", question: "'Todo recto' significa:", options: ["Turn left", "Turn right", "Go back", "Straight ahead"], correctIndex: 3 },
+      { type: "mcq", question: "Enfrente de significa:", options: ["Next to", "Far from", "In front of / Opposite", "Behind"], correctIndex: 2 },
+      { type: "mcq", question: "¿Dónde sacas dinero en España?", options: ["En la farmacia", "En el ayuntamiento", "En el cajero automático", "En la comisaría"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cómo se dice 'next to the library'?", options: ["delante de la biblioteca", "al lado de la biblioteca", "detrás de la biblioteca", "lejos de la biblioteca"], correctIndex: 1 }
+    ]
+  }),
+
+  "My Academic Goals & University Life": (lang) => ({
+    title: "Metas Académicas y Vida Universitaria",
+    explanation: `### La Universidad en España — Vocabulario Esencial
+
+#### Tipos de estudios:
+| Nivel | Español | Duración |
+|:---|:---|:---|
+| FP Grado Medio | Ciclo Medio | 2 años |
+| FP Grado Superior | Ciclo Superior | 2 años |
+| Grado Universitario | Grado | 4 años |
+| Máster | Máster | 1-2 años |
+| Doctorado | Doctorado / PhD | 3-5 años |
+
+#### Vocabulario universitario:
+| Español | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} |
+|:---|:---|
+| la matrícula | ${lang === "ar" ? "التسجيل" : lang === "fr" ? "l'inscription" : "enrollment"} |
+| el expediente | ${lang === "ar" ? "الملف الأكاديمي" : lang === "fr" ? "le dossier académique" : "academic record"} |
+| la beca | ${lang === "ar" ? "المنحة" : lang === "fr" ? "la bourse" : "scholarship"} |
+| el TFG | ${lang === "ar" ? "مشروع التخرج" : lang === "fr" ? "le mémoire de licence" : "bachelor's thesis"} |
+| el NIE | ${lang === "ar" ? "رقم هوية الأجانب" : lang === "fr" ? "numéro d'identification étranger" : "foreigner ID number"} |
+| la homologación | ${lang === "ar" ? "معادلة الشهادة" : lang === "fr" ? "l'équivalence de diplôme" : "degree recognition"} |
+
+#### Frases útiles:
+- **Quiero estudiar** Enfermería en la UAM.
+- **Mi meta es** conseguir el título de Grado.
+- **Necesito homologar** mi Bachillerato marroquí.
+- **Tengo que solicitar** el NIE en la comisaría.`,
+    vocabulary: [
+      { spanish: "la homologación", dynamicLang: lang === "ar" ? "معادلة الشهادة" : lang === "fr" ? "l'équivalence du diplôme" : "degree recognition", explanation: "Proceso obligatorio para estudiar en España" },
+      { spanish: "el NIE", dynamicLang: lang === "ar" ? "رقم هوية الأجنبي" : lang === "fr" ? "le NIE (numéro étranger)" : "foreigner ID number", explanation: "Número de Identificación de Extranjero" },
+      { spanish: "la beca", dynamicLang: lang === "ar" ? "المنحة الدراسية" : lang === "fr" ? "la bourse d'études" : "scholarship", explanation: "Becas Erasmus, MAEC, autonómicas..." },
+      { spanish: "matricularse", dynamicLang: lang === "ar" ? "يسجل في الجامعة" : lang === "fr" ? "s'inscrire à l'université" : "to enroll", explanation: "Me matriculo en septiembre" },
+      { spanish: "el expediente académico", dynamicLang: lang === "ar" ? "السجل الأكاديمي" : lang === "fr" ? "le relevé de notes" : "academic transcript", explanation: "Notas de todas las asignaturas" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Qué es la homologación?", options: ["Un tipo de visa", "El reconocimiento oficial del título extranjero", "Un examen de español", "Una beca universitaria"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuántos años dura generalmente un Grado universitario en España?", options: ["2 años", "3 años", "4 años", "5 años"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué significa NIE?", options: ["Número de Inscripción Educativa", "Número de Identificación de Extranjero", "Nota de Ingreso Especial", "Nivel de Idioma en España"], correctIndex: 1 },
+      { type: "mcq", question: "Para estudiar FP Grado Superior, ¿cuántos años dura?", options: ["1 año", "2 años", "3 años", "4 años"], correctIndex: 1 },
+      { type: "mcq", question: "¿Qué necesitas para solicitar una beca?", options: ["Solo el pasaporte", "Un buen expediente académico", "Trabajar a tiempo completo", "Tener 30 años mínimo"], correctIndex: 1 }
+    ]
+  }),
+
+  "GUSTAR & Preference Verbs": (lang) => ({
+    title: "El Verbo GUSTAR y Verbos de Preferencia",
+    explanation: `### GUSTAR — El Verbo más Especial del Español
+
+GUSTAR funciona de manera diferente a todos los demás verbos. Es **"reversed"** comparado con el inglés, el árabe y el francés.
+
+#### ¿Cómo funciona GUSTAR?
+**El sujeto es la cosa que gusta, no la persona.**
+
+| Español | Estructura | Traducción |
+|:---|:---|:---|
+| Me gusta el café. | A mí + me gusta + el café | I like coffee. |
+| Te gusta Madrid. | A ti + te gusta + Madrid | You like Madrid. |
+| Le gusta estudiar. | A él/ella + le gusta + estudiar | He/She likes studying. |
+| Nos gusta la música. | A nosotros + nos gusta + la música | We like music. |
+| Os gusta la paella. | A vosotros + os gusta + la paella | You all like paella. |
+| Les gustan los libros. | A ellos + les gustan + los libros | They like books. |
+
+#### Regla clave:
+- **GUSTA** (singular) cuando el sujeto es singular o un infinitivo
+  - Me **gusta** la tortilla. / Me **gusta** bailar.
+- **GUSTAN** (plural) cuando el sujeto es plural
+  - Me **gustan** los libros. / Me **gustan** las ciudades españolas.
+
+#### Otros verbos como GUSTAR:
+- **encantar** = to love (stronger than gustar)
+- **molestar** = to bother
+- **interesar** = to interest
+- **parecer** = to seem
+- **apetecer** = to feel like (food/drink)
+
+#### Ejemplos:
+- Me **encanta** España. (I love Spain)
+- No me **gusta** el frío. (I don't like cold)
+- ¿Te **apetece** un café? (Do you feel like a coffee?)`,
+    vocabulary: [
+      { spanish: "me gusta", dynamicLang: lang === "ar" ? "أنا أحب / يعجبني" : lang === "fr" ? "j'aime / ça me plaît" : "I like", explanation: "Me gusta el español (singular)" },
+      { spanish: "me gustan", dynamicLang: lang === "ar" ? "أنا أحب (جمع)" : lang === "fr" ? "j'aime (pluriel)" : "I like (plural)", explanation: "Me gustan los libros (plural)" },
+      { spanish: "me encanta", dynamicLang: lang === "ar" ? "أنا أحب كثيراً" : lang === "fr" ? "j'adore" : "I love", explanation: "Más fuerte que 'me gusta'" },
+      { spanish: "no me gusta", dynamicLang: lang === "ar" ? "لا يعجبني" : lang === "fr" ? "je n'aime pas" : "I don't like", explanation: "La negación de gustar" },
+      { spanish: "¿Te apetece?", dynamicLang: lang === "ar" ? "هل تشتهي؟" : lang === "fr" ? "Tu as envie de?" : "Do you feel like?", explanation: "Para proponer comida o bebida" }
+    ],
+    practice: [
+      { type: "mcq", question: "Completa: 'Me ___ los exámenes' (I don't like)", options: ["gusta", "gustan", "gustas", "gustamos"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es correcto? ('She likes music')", options: ["Ella gusta la música", "Le gusta la música", "Le gustan la música", "Gusta ella la música"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuándo usas GUSTAN (plural)?", options: ["Siempre", "Cuando el sujeto es plural", "Con yo", "Con nosotros"], correctIndex: 1 },
+      { type: "mcq", question: "'Me encanta Madrid' significa:", options: ["I'm in Madrid", "I need Madrid", "I love Madrid", "I'm from Madrid"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cuál es el pronombre para 'nosotros' con GUSTAR?", options: ["me", "te", "le", "nos"], correctIndex: 3 }
+    ]
+  }),
+
+  "Preterite Tense: Regular Verbs": (lang) => ({
+    title: "El Pretérito Indefinido — Verbos Regulares",
+    explanation: `### El Pretérito Indefinido — Para Hablar del Pasado
+
+El pretérito indefinido se usa para acciones **completadas** en el pasado. Es el tiempo narrativo del pasado.
+
+#### Cuándo usarlo:
+- Acciones terminadas en un tiempo definido: *ayer, el lunes, en 2022, hace un mes*
+- Secuencias de eventos pasados: *primero hice X, luego Y*
+- Interrupciones de una acción continua
+
+#### Terminaciones regulares:
+| Pronombre | -AR (estudiar) | -ER (comer) | -IR (vivir) |
+|:---:|:---:|:---:|:---:|
+| yo | estudi**é** | com**í** | viv**í** |
+| tú | estudi**aste** | com**iste** | viv**iste** |
+| él/ella | estudi**ó** | com**ió** | viv**ió** |
+| nosotros | estudi**amos** | com**imos** | viv**imos** |
+| vosotros | estudi**asteis** | com**isteis** | viv**isteis** |
+| ellos | estudi**aron** | com**ieron** | viv**ieron** |
+
+#### Marcadores temporales del indefinido:
+- **ayer** = yesterday
+- **anteayer** = the day before yesterday
+- **el lunes pasado** = last Monday
+- **la semana pasada** = last week
+- **el año pasado** = last year
+- **hace dos días/meses** = two days/months ago
+- **en 2023** = in 2023`,
+    vocabulary: [
+      { spanish: "ayer", dynamicLang: lang === "ar" ? "أمس" : lang === "fr" ? "hier" : "yesterday", explanation: "Ayer llegué a Madrid" },
+      { spanish: "la semana pasada", dynamicLang: lang === "ar" ? "الأسبوع الماضي" : lang === "fr" ? "la semaine dernière" : "last week", explanation: "La semana pasada estudié mucho" },
+      { spanish: "hace + tiempo", dynamicLang: lang === "ar" ? "منذ..." : lang === "fr" ? "il y a + durée" : "... ago", explanation: "Hace tres meses llegué a España" },
+      { spanish: "llegué", dynamicLang: lang === "ar" ? "وصلت" : lang === "fr" ? "je suis arrivé(e)" : "I arrived", explanation: "Llegar → yo llegué (preterito)" },
+      { spanish: "viví", dynamicLang: lang === "ar" ? "عشت" : lang === "fr" ? "j'ai vécu" : "I lived", explanation: "Vivir → yo viví (preterito)" }
+    ],
+    practice: [
+      { type: "mcq", question: "Ayer yo ___ (estudiar) cinco horas.", options: ["estudié", "estudiaba", "estudio", "estudiaste"], correctIndex: 0 },
+      { type: "mcq", question: "Ella ___ (comer) en la cafetería ayer.", options: ["comía", "come", "comió", "comiste"], correctIndex: 2 },
+      { type: "mcq", question: "¿Con qué marcador NO usarías el Indefinido?", options: ["ayer", "normalmente", "el lunes pasado", "hace dos días"], correctIndex: 1 },
+      { type: "mcq", question: "Nosotros ___ (vivir) en Sevilla el año pasado.", options: ["vivimos", "vivíamos", "vivieron", "viví"], correctIndex: 0 },
+      { type: "mcq", question: "¿Cuál es 'tú' del Indefinido de HABLAR?", options: ["hablé", "habló", "hablaste", "hablaron"], correctIndex: 2 }
+    ]
+  }),
+
+  "Preterite Tense: Irregular Verbs": (lang) => ({
+    title: "El Pretérito Indefinido — Verbos Irregulares",
+    explanation: `### Verbos Irregulares en el Pretérito Indefinido
+
+Estos verbos son los más usados en español. ¡Hay que memorizarlos!
+
+#### Irregulares totales (raíz completamente nueva):
+| Infinitivo | Raíz irregular | yo | tú | él |
+|:---|:---|:---:|:---:|:---:|
+| **ser / ir** | fue- | fui | fuiste | fue |
+| **tener** | tuv- | tuve | tuviste | tuvo |
+| **estar** | estuv- | estuve | estuviste | estuvo |
+| **hacer** | hic- | hice | hiciste | hizo |
+| **poder** | pud- | pude | pudiste | pudo |
+| **saber** | sup- | supe | supiste | supo |
+| **querer** | quis- | quise | quisiste | quiso |
+| **venir** | vin- | vine | viniste | vino |
+| **poner** | pus- | puse | pusiste | puso |
+| **decir** | dij- | dije | dijiste | dijo |
+
+⚠️ **SER e IR** tienen las mismas formas:
+- Fui a Madrid = I went to Madrid
+- Fui estudiante = I was a student
+El contexto indica cuál es.
+
+#### Terminaciones irregulares (iguales para todos):
+yo: **-e**, tú: **-iste**, él: **-o**, nos: **-imos**, vos: **-isteis**, ellos: **-ieron/-eron**`,
+    vocabulary: [
+      { spanish: "fui", dynamicLang: lang === "ar" ? "ذهبت / كنت" : lang === "fr" ? "je suis allé(e) / j'étais" : "I went / I was", explanation: "SER e IR tienen las mismas formas" },
+      { spanish: "hice", dynamicLang: lang === "ar" ? "فعلت / قمت بـ" : lang === "fr" ? "j'ai fait" : "I did / I made", explanation: "Hacer → hice, hiciste, hizo..." },
+      { spanish: "tuve", dynamicLang: lang === "ar" ? "كان لدي" : lang === "fr" ? "j'ai eu / j'avais" : "I had", explanation: "Tener → tuve, tuviste, tuvo..." },
+      { spanish: "vine", dynamicLang: lang === "ar" ? "جئت" : lang === "fr" ? "je suis venu(e)" : "I came", explanation: "Venir → vine, viniste, vino..." },
+      { spanish: "dije", dynamicLang: lang === "ar" ? "قلت" : lang === "fr" ? "j'ai dit" : "I said", explanation: "Decir → dije, dijiste, dijo..." }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cuál es 'yo' del Indefinido de HACER?", options: ["hacé", "hicé", "hice", "hizo"], correctIndex: 2 },
+      { type: "mcq", question: "Ella ___ a España hace tres años.", options: ["fue", "iba", "va", "irá"], correctIndex: 0 },
+      { type: "mcq", question: "¿Cuál es la forma de 'SER/IR' para 'nosotros'?", options: ["fuimos", "éramos", "fueron", "íbamos"], correctIndex: 0 },
+      { type: "mcq", question: "Yo ___ que estudiar mucho ayer. (TENER)", options: ["tenía", "tengo", "tuve", "tendré"], correctIndex: 2 },
+      { type: "mcq", question: "'Dijeron' es la forma de 'ellos' de:", options: ["dar", "decir", "deber", "dormir"], correctIndex: 1 }
+    ]
+  }),
+
+  "Imperfect Tense: Uses & Formation": (lang) => ({
+    title: "El Pretérito Imperfecto — Usos y Formación",
+    explanation: `### El Pretérito Imperfecto — El Pasado Continuo
+
+El imperfecto describe acciones **habituales, continuas o descriptivas** en el pasado. Contrasta con el indefinido.
+
+#### Formación:
+| Pronombre | -AR (hablar) | -ER/-IR (comer/vivir) |
+|:---:|:---:|:---:|
+| yo | habl**aba** | com**ía** / viv**ía** |
+| tú | habl**abas** | com**ías** / viv**ías** |
+| él/ella | habl**aba** | com**ía** / viv**ía** |
+| nosotros | habl**ábamos** | com**íamos** |
+| vosotros | habl**abais** | com**íais** |
+| ellos | habl**aban** | com**ían** |
+
+#### Solo 3 irregulares:
+| Verbo | yo | tú | él |
+|:---|:---:|:---:|:---:|
+| **ser** | era | eras | era |
+| **ir** | iba | ibas | iba |
+| **ver** | veía | veías | veía |
+
+#### ¿Cuándo usar el Imperfecto?
+1. **Hábitos del pasado**: Cuando era niño, **comía** tajín todos los viernes.
+2. **Descripción en el pasado**: La ciudad **era** muy tranquila.
+3. **Acción interrumpida** (con Indefinido): **Estudiaba** cuando me **llamó** mi amigo.
+4. **Hora en el pasado**: **Eran** las 3 cuando llegué.
+5. **Cortesía**: **Quería** preguntarte algo.`,
+    vocabulary: [
+      { spanish: "cuando era niño/a", dynamicLang: lang === "ar" ? "عندما كنت صغيراً" : lang === "fr" ? "quand j'étais enfant" : "when I was a child", explanation: "Fórmula clásica del imperfecto" },
+      { spanish: "solía + infinitivo", dynamicLang: lang === "ar" ? "كان يعتاد على" : lang === "fr" ? "j'avais l'habitude de" : "used to + verb", explanation: "Solía estudiar en la biblioteca" },
+      { spanish: "antes", dynamicLang: lang === "ar" ? "قبل / في السابق" : lang === "fr" ? "avant / autrefois" : "before / used to", explanation: "Antes vivía en Casablanca" },
+      { spanish: "siempre", dynamicLang: lang === "ar" ? "دائماً" : lang === "fr" ? "toujours" : "always", explanation: "Siempre desayunaba con mi familia" },
+      { spanish: "era", dynamicLang: lang === "ar" ? "كان" : lang === "fr" ? "c'était / il était" : "it was / I was / he was", explanation: "SER en imperfecto — solo 3 irregulares" }
+    ],
+    practice: [
+      { type: "mcq", question: "Cuando era pequeño, ___ (jugar) en la calle.", options: ["jugué", "jugaba", "jugaré", "juego"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuándo NO usarías el imperfecto?", options: ["Hablar de hábitos pasados", "Describir el pasado", "Una acción terminada específica", "Acción interrumpida"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cuál es el imperfecto de 'ser' para 'yo'?", options: ["fui", "era", "sería", "seré"], correctIndex: 1 },
+      { type: "mcq", question: "Completa: '___ las 8 cuando llegué a clase'", options: ["Fueron", "Eran", "Son", "Serán"], correctIndex: 1 },
+      { type: "mcq", question: "Antes ___ (vivir) en Marruecos.", options: ["viví", "vivo", "vivía", "viviré"], correctIndex: 2 }
+    ]
+  }),
+
+  "Reflexive Verbs & Daily Routines": (lang) => ({
+    title: "Los Verbos Reflexivos y la Rutina Diaria",
+    explanation: `### Verbos Reflexivos — Cuando la Acción Recae sobre Uno Mismo
+
+Un verbo reflexivo indica que el sujeto realiza y recibe la acción. Se reconocen por el pronombre reflexivo.
+
+#### Pronombres reflexivos:
+| Pronombre | Reflexivo |
+|:---:|:---:|
+| yo | **me** |
+| tú | **te** |
+| él/ella/usted | **se** |
+| nosotros | **nos** |
+| vosotros | **os** |
+| ellos/ustedes | **se** |
+
+#### Verbos reflexivos de la rutina:
+| Infinitivo | Significado | Ejemplo |
+|:---|:---|:---|
+| **levantarse** | to get up | Me levanto a las 7 |
+| **ducharse** | to shower | Me ducho cada mañana |
+| **afeitarse** | to shave | Mi padre se afeita |
+| **peinarse** | to comb hair | Se peina antes de salir |
+| **maquillarse** | to put on makeup | Se maquilla en 5 minutos |
+| **vestirse** | to get dressed | Nos vestimos para la clase |
+| **sentarse** | to sit down | Siéntate aquí |
+| **acostarse** | to go to bed | Me acuesto a las 23h |
+| **dormirse** | to fall asleep | Me duermo rápido |
+
+#### ¿Reflexivo vs. No reflexivo?
+- **Lavar** (to wash) vs. **lavarse** (to wash oneself)
+  - Lavo los platos. (I wash the dishes)
+  - Me lavo las manos. (I wash my hands)`,
+    vocabulary: [
+      { spanish: "levantarse", dynamicLang: lang === "ar" ? "يستيقظ ويقوم" : lang === "fr" ? "se lever" : "to get up", explanation: "Me levanto — te levantas — se levanta" },
+      { spanish: "ducharse", dynamicLang: lang === "ar" ? "يستحم" : lang === "fr" ? "se doucher" : "to take a shower", explanation: "Me ducho todos los días" },
+      { spanish: "vestirse", dynamicLang: lang === "ar" ? "يلبس ملابسه" : lang === "fr" ? "s'habiller" : "to get dressed", explanation: "Me visto para ir a la uni" },
+      { spanish: "acostarse", dynamicLang: lang === "ar" ? "يذهب للنوم" : lang === "fr" ? "se coucher" : "to go to bed", explanation: "Me acuesto a medianoche" },
+      { spanish: "me llamo", dynamicLang: lang === "ar" ? "اسمي" : lang === "fr" ? "je m'appelle" : "my name is", explanation: "Llamarse — verbo reflexivo para el nombre" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Cuál es el pronombre reflexivo de 'nosotros'?", options: ["me", "te", "nos", "se"], correctIndex: 2 },
+      { type: "mcq", question: "Ella ___ (ducharse) por la mañana.", options: ["se ducha", "me ducho", "te duchas", "ducha"], correctIndex: 0 },
+      { type: "mcq", question: "'Me visto' significa:", options: ["I dress someone", "I get dressed", "He gets dressed", "We get dressed"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es reflexivo?", options: ["lavar los platos", "lavarse las manos", "lavar la ropa", "lavar el coche"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es el orden correcto de la mañana?", options: ["vestirse, levantarse, ducharse", "levantarse, ducharse, vestirse", "ducharse, vestirse, levantarse", "vestirse, ducharse, levantarse"], correctIndex: 1 }
+    ]
+  }),
+
+  "Object Pronouns: Direct & Indirect": (lang) => ({
+    title: "Los Pronombres de Objeto Directo e Indirecto",
+    explanation: `### Pronombres de Complemento Directo e Indirecto
+
+#### Pronombres de Objeto Directo (POD) — responde a ¿qué? / ¿quién?:
+| Persona | POD |
+|:---:|:---:|
+| yo | **me** |
+| tú | **te** |
+| él | **lo** |
+| ella | **la** |
+| nosotros | **nos** |
+| vosotros | **os** |
+| ellos | **los** |
+| ellas | **las** |
+
+**Ejemplo:** ¿Tienes el libro? Sí, **lo** tengo.
+¿Conoces a María? Sí, **la** conozco.
+
+#### Pronombres de Objeto Indirecto (POI) — responde a ¿a quién? / ¿para quién?:
+| Persona | POI |
+|:---:|:---:|
+| yo | **me** |
+| tú | **te** |
+| él/ella | **le** |
+| nosotros | **nos** |
+| vosotros | **os** |
+| ellos/ellas | **les** |
+
+**Ejemplo:** Doy el libro **a María** → Le doy el libro.
+
+#### Cuando se combinan POI + POD:
+Le/les + lo/la/los/las → **SE** + lo/la/los/las
+- Le doy el libro → **Se** lo doy.
+
+#### Posición del pronombre:
+- Antes del verbo conjugado: **Lo** estudio.
+- Después del infinitivo/gerundio: Voy a estudi**arlo** / Estoy estudi**ándolo**`,
+    vocabulary: [
+      { spanish: "lo / la", dynamicLang: lang === "ar" ? "إياه / إياها (مفعول مباشر)" : lang === "fr" ? "le / la (COD)" : "him/it / her/it (direct object)", explanation: "Para sustituir el objeto directo" },
+      { spanish: "le / les", dynamicLang: lang === "ar" ? "له / لهم (مفعول غير مباشر)" : lang === "fr" ? "lui / leur (COI)" : "to him/her / to them (indirect)", explanation: "Para el objeto indirecto (a + persona)" },
+      { spanish: "¿Lo tienes?", dynamicLang: lang === "ar" ? "هل عندك إياه؟" : lang === "fr" ? "Tu l'as?" : "Do you have it?", explanation: "Lo = el libro / el documento" },
+      { spanish: "Se lo doy", dynamicLang: lang === "ar" ? "أعطيه إياه" : lang === "fr" ? "Je le lui donne" : "I give it to him/her", explanation: "Le + lo → Se lo (combinación)" },
+      { spanish: "me lo explica", dynamicLang: lang === "ar" ? "يشرحه لي" : lang === "fr" ? "il me l'explique" : "he explains it to me", explanation: "POI (me) + POD (lo)" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Tienes el pasaporte? Sí, ___ tengo.", options: ["la", "le", "lo", "les"], correctIndex: 2 },
+      { type: "mcq", question: "Doy el documento a la profesora. → ___ doy el documento.", options: ["Lo", "La", "Le", "Les"], correctIndex: 2 },
+      { type: "mcq", question: "Le doy el libro a ella. → ___ lo doy.", options: ["Le", "Les", "Lo", "Se"], correctIndex: 3 },
+      { type: "mcq", question: "¿Dónde va el pronombre con un infinitivo?", options: ["Antes del infinitivo solo", "Después del infinitivo (adjunto)", "Ambas posiciones son correctas", "Nunca con infinitivo"], correctIndex: 2 },
+      { type: "mcq", question: "¿Cuál es el POD femenino plural?", options: ["los", "les", "las", "le"], correctIndex: 2 }
+    ]
+  }),
+
+  "Accommodation & Rental Vocabulary": (lang) => ({
+    title: "El Alojamiento y el Contrato de Alquiler",
+    explanation: `### Buscar Piso en España — Vocabulario Esencial
+
+Como estudiante en España, necesitarás entender contratos de alquiler y comunicarte con propietarios y agencias.
+
+#### Tipos de alojamiento:
+| Tipo | Descripción | Precio aprox. |
+|:---|:---|:---|
+| **Piso compartido** | Habitación en piso con otros | 300-600€/mes |
+| **Residencia universitaria** | Campus o gestionada | 500-900€/mes |
+| **Estudio** | Piso pequeño individual | 600-1000€/mes |
+| **Piso entero** | Apartamento completo | 800-1500€/mes |
+
+#### Vocabulario del contrato de alquiler:
+| Español | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} |
+|:---|:---|
+| el alquiler | ${lang === "ar" ? "الإيجار" : lang === "fr" ? "le loyer" : "the rent"} |
+| la fianza | ${lang === "ar" ? "ضمان الإيجار" : lang === "fr" ? "la caution" : "the deposit"} |
+| el contrato | ${lang === "ar" ? "العقد" : lang === "fr" ? "le contrat" : "the contract"} |
+| el propietario | ${lang === "ar" ? "المالك" : lang === "fr" ? "le propriétaire" : "the landlord"} |
+| el inquilino | ${lang === "ar" ? "المستأجر" : lang === "fr" ? "le locataire" : "the tenant"} |
+| los gastos incluidos | ${lang === "ar" ? "المصاريف مشمولة" : lang === "fr" ? "charges comprises" : "bills included"} |
+| el empadronamiento | ${lang === "ar" ? "تسجيل السكن البلدي" : lang === "fr" ? "l'enregistrement municipal" : "municipal registration"} |
+
+#### ¡OJO! El empadronamiento:
+Es **obligatorio** registrarse en el padrón municipal de tu ciudad. Lo necesitas para muchos trámites: NIE, tarjeta sanitaria, becas...`,
+    vocabulary: [
+      { spanish: "el alquiler", dynamicLang: lang === "ar" ? "الإيجار" : lang === "fr" ? "le loyer" : "the rent", explanation: "El alquiler se paga mensualmente" },
+      { spanish: "la fianza", dynamicLang: lang === "ar" ? "ضمان/كفالة" : lang === "fr" ? "la caution" : "the deposit", explanation: "Normalmente equivale a 1-2 meses de alquiler" },
+      { spanish: "el empadronamiento", dynamicLang: lang === "ar" ? "التسجيل البلدي" : lang === "fr" ? "l'inscription en mairie" : "municipal registration", explanation: "Obligatorio para todos los residentes en España" },
+      { spanish: "el piso compartido", dynamicLang: lang === "ar" ? "الشقة المشتركة" : lang === "fr" ? "la colocation" : "shared apartment", explanation: "La opción más económica para estudiantes" },
+      { spanish: "los gastos incluidos", dynamicLang: lang === "ar" ? "المصاريف مشمولة" : lang === "fr" ? "charges comprises" : "bills included", explanation: "Agua, luz, internet incluidos en el precio" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Qué es la fianza?", options: ["El alquiler mensual", "Un depósito de garantía al inicio", "Los gastos del mes", "El precio del contrato"], correctIndex: 1 },
+      { type: "mcq", question: "¿Para qué necesitas el empadronamiento en España?", options: ["Solo para votar", "Para trámites como NIE, sanidad, becas", "Solo si trabajas", "Para abrir una empresa"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es la opción más económica para un estudiante?", options: ["Piso entero", "Hotel", "Piso compartido", "Aparthotel"], correctIndex: 2 },
+      { type: "mcq", question: "El inquilino es:", options: ["El propietario del piso", "La agencia inmobiliaria", "La persona que alquila el piso", "El vecino"], correctIndex: 2 },
+      { type: "mcq", question: "'Gastos incluidos' significa:", options: ["Que pagas todos los gastos aparte", "Que el agua y la luz están incluidos en el precio", "Que no hay gastos", "Que pagas más"], correctIndex: 1 }
+    ]
+  }),
+
+  "Introduction to Subjunctive Mood": (lang) => ({
+    title: "Introducción al Modo Subjuntivo",
+    explanation: `### El Subjuntivo — El Modo de la Subjetividad
+
+El subjuntivo es uno de los temas más desafiantes del español, pero es esencial para el nivel B1-B2.
+
+#### ¿Qué es el subjuntivo?
+El subjuntivo expresa **subjetividad**: deseos, dudas, emociones, recomendaciones, hipótesis. Se usa siempre en oraciones subordinadas (con "que").
+
+#### Formación del Presente de Subjuntivo:
+**Regla:** Toma la forma "yo" del presente indicativo, quita la -o, y añade las terminaciones opuestas.
+
+| | -AR → terminaciones -ER/-IR | -ER/-IR → terminaciones -AR |
+|:---:|:---:|:---:|
+| yo | habl**e** | com**a** |
+| tú | habl**es** | com**as** |
+| él | habl**e** | com**a** |
+| nosotros | habl**emos** | com**amos** |
+| vosotros | habl**éis** | com**áis** |
+| ellos | habl**en** | com**an** |
+
+#### Cuándo usar el subjuntivo (WEIRDO):
+- **W**ishes (deseos): Quiero que **vengas**
+- **E**motion (emociones): Me alegra que **estés** aquí
+- **I**mpersonal expressions: Es importante que **estudies**
+- **R**ecommendations: Te recomiendo que **vayas**
+- **D**oubt/Denial: No creo que **sea** verdad
+- **O**jalá: ¡Ojalá **apruebe** el examen!`,
+    vocabulary: [
+      { spanish: "quiero que...", dynamicLang: lang === "ar" ? "أريد أن..." : lang === "fr" ? "je veux que..." : "I want you to...", explanation: "Deseo + que + subjuntivo" },
+      { spanish: "es importante que", dynamicLang: lang === "ar" ? "من المهم أن" : lang === "fr" ? "il est important que" : "it's important that", explanation: "Expresión impersonal + subjuntivo" },
+      { spanish: "¡Ojalá!", dynamicLang: lang === "ar" ? "ليتني! / إن شاء الله!" : lang === "fr" ? "Pourvu que! / J'espère que!" : "Hopefully! / I wish!", explanation: "Del árabe: وَاللَّه. Siempre con subjuntivo" },
+      { spanish: "no creo que", dynamicLang: lang === "ar" ? "لا أعتقد أن" : lang === "fr" ? "je ne crois pas que" : "I don't think that", explanation: "Duda + subjuntivo" },
+      { spanish: "te recomiendo que", dynamicLang: lang === "ar" ? "أنصحك بأن" : lang === "fr" ? "je te recommande de" : "I recommend that you", explanation: "Recomendación + subjuntivo" }
+    ],
+    practice: [
+      { type: "mcq", question: "Quiero que tú ___ (estudiar) más.", options: ["estudias", "estudies", "estudiás", "estudio"], correctIndex: 1 },
+      { type: "mcq", question: "Es importante que ___ (llegar) a tiempo.", options: ["llegues", "llegas", "llegan", "llegara"], correctIndex: 0 },
+      { type: "mcq", question: "¡Ojalá ___ (aprobar) el examen!", options: ["apruebo", "aprueba", "apruebe", "aprobé"], correctIndex: 2 },
+      { type: "mcq", question: "No creo que ___ (ser) verdad.", options: ["es", "sea", "fue", "será"], correctIndex: 1 },
+      { type: "mcq", question: "¿Con cuál de estas expresiones NO se usa el subjuntivo?", options: ["Quiero que", "Es importante que", "Sé que", "Ojalá"], correctIndex: 2 }
+    ]
+  }),
+
+  "Por vs Para — Key Differences": (lang) => ({
+    title: "POR vs PARA — Diferencias Clave",
+    explanation: `### POR vs PARA — Una de las Distinciones Más Importantes
+
+Ambas preposiciones pueden traducirse como "for", "by", "through" en inglés, pero tienen usos muy diferentes.
+
+#### PARA — usos principales:
+| Uso | Ejemplo |
+|:---|:---|
+| **Destino / Dirección** | Salgo **para** Madrid mañana |
+| **Finalidad / Propósito** | Estudio **para** aprobar |
+| **Destinatario** | Este libro es **para** ti |
+| **Opinión personal** | **Para** mí, el español es fácil |
+| **Fecha límite** | Necesito el trabajo **para** el lunes |
+| **Comparación inesperada** | Hablas bien **para** ser principiante |
+
+#### POR — usos principales:
+| Uso | Ejemplo |
+|:---|:---|
+| **Causa / Motivo** | Lo hice **por** amor |
+| **Duración** | Estudié **por** tres horas |
+| **Intercambio** | Pagué 50€ **por** el libro |
+| **Movimiento a través** | Paseé **por** el parque |
+| **Medio de comunicación** | Te llamo **por** teléfono |
+| **Agente en pasiva** | El libro fue escrito **por** Cervantes |
+| **Aproximación** | Vivo **por** el centro |
+
+#### Truco mnemotécnico:
+- **PARA** = P.A.R.A → **P**ropósito, **A**destinatario, **R**esultado, **A**cceso al futuro
+- **POR** = causa, duración, intercambio, movimiento`,
+    vocabulary: [
+      { spanish: "estudio para aprobar", dynamicLang: lang === "ar" ? "أدرس لكي أنجح" : lang === "fr" ? "j'étudie pour réussir" : "I study in order to pass", explanation: "PARA = finalidad/propósito" },
+      { spanish: "por teléfono", dynamicLang: lang === "ar" ? "عبر الهاتف" : lang === "fr" ? "par téléphone" : "by phone", explanation: "POR = medio de comunicación" },
+      { spanish: "gracias por", dynamicLang: lang === "ar" ? "شكراً على" : lang === "fr" ? "merci pour" : "thank you for", explanation: "POR = causa (por + razón)" },
+      { spanish: "para mí", dynamicLang: lang === "ar" ? "بالنسبة لي" : lang === "fr" ? "pour moi" : "for me / in my opinion", explanation: "PARA = opinión personal" },
+      { spanish: "por eso", dynamicLang: lang === "ar" ? "لهذا السبب" : lang === "fr" ? "c'est pourquoi" : "that's why / for that reason", explanation: "POR ESO = conector de causa" }
+    ],
+    practice: [
+      { type: "mcq", question: "Salgo ___ Madrid a las 8.", options: ["por", "para", "de", "en"], correctIndex: 1 },
+      { type: "mcq", question: "Estudié ___ cinco horas ayer.", options: ["para", "por", "en", "durante"], correctIndex: 1 },
+      { type: "mcq", question: "Este regalo es ___ ti.", options: ["por", "para", "de", "en"], correctIndex: 1 },
+      { type: "mcq", question: "Te llamo ___ teléfono esta noche.", options: ["para", "en", "por", "de"], correctIndex: 2 },
+      { type: "mcq", question: "Gracias ___ tu ayuda.", options: ["para", "en", "por", "con"], correctIndex: 2 }
+    ]
+  }),
+
+  "Visa & Enrollment Interview Vocabulary": (lang) => ({
+    title: "Vocabulario para Visados y Entrevistas de Admisión",
+    explanation: `### Trámites para Estudiar en España — Vocabulario Oficial
+
+#### Documentos necesarios para el visado de estudiante:
+| Documento | Descripción |
+|:---|:---|
+| **Pasaporte vigente** | Con mínimo 6 meses de validez |
+| **Carta de aceptación** | De la universidad o escuela española |
+| **Seguro médico** | Cobertura total en España |
+| **Medios económicos** | Extracto bancario (~600€/mes mínimo) |
+| **Certificado de antecedentes penales** | Apostillado y traducido |
+| **Título académico apostillado** | Con traducción jurada |
+
+#### Frases para la entrevista consular:
+- **¿Cuáles son sus motivos para estudiar en España?**
+  - "Quiero estudiar Enfermería porque..."
+  - "He sido aceptado en la Universidad de..."
+- **¿Tiene medios económicos suficientes?**
+  - "Tengo una beca de / mis padres me financian..."
+- **¿Dónde va a vivir en España?**
+  - "He reservado plaza en la residencia universitaria..."
+
+#### Vocabulario clave:
+| Español | ${lang === "ar" ? "العربية" : lang === "fr" ? "Français" : "English"} |
+|:---|:---|
+| el consulado | ${lang === "ar" ? "القنصلية" : lang === "fr" ? "le consulat" : "consulate"} |
+| la apostilla | ${lang === "ar" ? "الأبوستيل" : lang === "fr" ? "l'apostille" : "apostille"} |
+| la traducción jurada | ${lang === "ar" ? "الترجمة المحلفة" : lang === "fr" ? "la traduction assermentée" : "certified translation"} |
+| el seguro médico | ${lang === "ar" ? "التأمين الطبي" : lang === "fr" ? "l'assurance maladie" : "health insurance"} |`,
+    vocabulary: [
+      { spanish: "el consulado", dynamicLang: lang === "ar" ? "القنصلية" : lang === "fr" ? "le consulat" : "the consulate", explanation: "Donde solicitas el visado de estudiante" },
+      { spanish: "la apostilla", dynamicLang: lang === "ar" ? "الأبوستيل (ختم رسمي)" : lang === "fr" ? "l'apostille (certification)" : "apostille (official certification)", explanation: "Sello internacional que certifica un documento oficial" },
+      { spanish: "la traducción jurada", dynamicLang: lang === "ar" ? "الترجمة المحلفة" : lang === "fr" ? "la traduction certifiée" : "certified translation", explanation: "Traducción oficial reconocida legalmente" },
+      { spanish: "la carta de aceptación", dynamicLang: lang === "ar" ? "رسالة القبول" : lang === "fr" ? "la lettre d'acceptation" : "acceptance letter", explanation: "Documento de la universidad que confirma tu plaza" },
+      { spanish: "el seguro médico", dynamicLang: lang === "ar" ? "التأمين الصحي" : lang === "fr" ? "l'assurance maladie" : "health insurance", explanation: "Obligatorio para el visado de estudiante" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Qué es la apostilla?", options: ["Un tipo de visa", "Una certificación internacional de documentos oficiales", "Un seguro médico", "Un número de estudiante"], correctIndex: 1 },
+      { type: "mcq", question: "¿Dónde solicitas el visado de estudiante en tu país?", options: ["En el ayuntamiento español", "En la universidad", "En el consulado de España", "En la comisaría"], correctIndex: 2 },
+      { type: "mcq", question: "¿Para qué sirve la carta de aceptación?", options: ["Para alquilar un piso", "Para demostrar que tienes plaza en una universidad española", "Para abrir una cuenta bancaria", "Para el empadronamiento"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es el mínimo de medios económicos que suele pedir el consulado?", options: ["100€/mes", "300€/mes", "600€/mes", "2000€/mes"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué necesitas antes de presentar el título extranjero en España?", options: ["Solo traducirlo", "Apostillarlo y traducirlo juradamente", "Escanearlo", "Nada, vale como está"], correctIndex: 1 }
+    ]
+  })
+
+};
+
+// Default lesson for unmatched topics
+function defaultLesson(topic: string, lang: string): LessonData {
+  const tLang = getLang(lang);
   return {
-    title: `${lvl} — ${topic}`,
-    explanation,
-    vocabulary,
-    practice
+    title: `Lección: ${topic}`,
+    explanation: `### ${topic}\n\nEsta lección cubre vocabulario y gramática esencial para el tema seleccionado. Practica con los ejercicios a continuación para reforzar tu comprensión.\n\n**Objetivo:** Dominar las expresiones y estructuras de ${topic} para comunicarte con fluidez en contextos académicos y cotidianos en España.`,
+    vocabulary: [
+      { spanish: "practicar", dynamicLang: lang === "ar" ? "يتدرب" : lang === "fr" ? "pratiquer" : "to practice", explanation: "La clave del éxito en español" },
+      { spanish: "aprender", dynamicLang: lang === "ar" ? "يتعلم" : lang === "fr" ? "apprendre" : "to learn", explanation: "Aprender español es invertir en tu futuro" },
+      { spanish: "mejorar", dynamicLang: lang === "ar" ? "يتحسن" : lang === "fr" ? "améliorer" : "to improve", explanation: "Mejora tu nivel cada día" },
+      { spanish: "entender", dynamicLang: lang === "ar" ? "يفهم" : lang === "fr" ? "comprendre" : "to understand", explanation: "¿Entiendes la lección?" },
+      { spanish: "repetir", dynamicLang: lang === "ar" ? "يكرر" : lang === "fr" ? "répéter" : "to repeat", explanation: "Repite las frases en voz alta" }
+    ],
+    practice: [
+      { type: "mcq", question: "¿Qué significa 'aprender'?", options: ["to forget", "to learn", "to teach", "to read"], correctIndex: 1 },
+      { type: "mcq", question: "¿Cuál es sinónimo de 'mejorar'?", options: ["empeorar", "progresar", "olvidar", "repetir"], correctIndex: 1 },
+      { type: "mcq", question: "Para hablar bien español necesitas:", options: ["Solo leer", "Solo escribir", "Practicar todos los días", "Memorizar el diccionario"], correctIndex: 2 },
+      { type: "mcq", question: "¿Qué significa 'entender'?", options: ["to speak", "to write", "to understand", "to listen"], correctIndex: 2 },
+      { type: "mcq", question: "La mejor forma de practicar español es:", options: ["Ver películas españolas", "Hablar con nativos", "Leer libros", "Todo lo anterior"], correctIndex: 3 }
+    ]
   };
+}
+
+export function getFallbackLessonData(lvl: string, topic: string, lang: string): LessonData {
+  // Try exact match first
+  const exactLesson = LESSONS[topic];
+  if (exactLesson) return exactLesson(lang);
+
+  // Try partial match
+  for (const key of Object.keys(LESSONS)) {
+    if (topic.includes(key.split(" ")[0]) || key.includes(topic.split(" ")[0])) {
+      return LESSONS[key](lang);
+    }
+  }
+
+  // Try keyword matching
+  const topicLower = topic.toLowerCase();
+  if (topicLower.includes("alphabet") || topicLower.includes("pronunciation")) return LESSONS["Alphabet & Pronunciation"](lang);
+  if (topicLower.includes("greet") || topicLower.includes("farewell")) return LESSONS["Greetings & Farewells"](lang);
+  if (topicLower.includes("introduc") || topicLower.includes("yourself") || topicLower.includes("age")) return LESSONS["Introducing Yourself & Age"](lang);
+  if (topicLower.includes("number") || topicLower.includes("time") || topicLower.includes("hora")) return LESSONS["Numbers 1 to 100 & Telling Time"](lang);
+  if (topicLower.includes("family") || topicLower.includes("famil")) return LESSONS["Family Members & Relationships"](lang);
+  if (topicLower.includes("gender") || topicLower.includes("article")) return LESSONS["Noun Gender & Articles"](lang);
+  if (topicLower.includes("ser") || topicLower.includes("estar")) return LESSONS["SER vs ESTAR — To Be"](lang);
+  if (topicLower.includes("-ar") || topicLower.includes("hablar") || topicLower.includes("regular")) return LESSONS["Regular -AR Verbs: Hablar, Estudiar"](lang);
+  if (topicLower.includes("routine") || topicLower.includes("daily") || topicLower.includes("activit")) return LESSONS["Daily Activities & Routines"](lang);
+  if (topicLower.includes("food") || topicLower.includes("cafe") || topicLower.includes("ordering")) return LESSONS["Ordering Food & Cafe Vocabulary"](lang);
+  if (topicLower.includes("weather") || topicLower.includes("season")) return LESSONS["Weather & Seasons"](lang);
+  if (topicLower.includes("color") || topicLower.includes("cloth")) return LESSONS["Colors & Clothing"](lang);
+  if (topicLower.includes("place") || topicLower.includes("direction")) return LESSONS["Describing Places & Directions"](lang);
+  if (topicLower.includes("academic") || topicLower.includes("university") || topicLower.includes("goal")) return LESSONS["My Academic Goals & University Life"](lang);
+  if (topicLower.includes("gustar") || topicLower.includes("preference")) return LESSONS["GUSTAR & Preference Verbs"](lang);
+  if (topicLower.includes("preterite") || topicLower.includes("indefinido")) {
+    if (topicLower.includes("irregular")) return LESSONS["Preterite Tense: Irregular Verbs"](lang);
+    return LESSONS["Preterite Tense: Regular Verbs"](lang);
+  }
+  if (topicLower.includes("imperfect") || topicLower.includes("imperfecto")) return LESSONS["Imperfect Tense: Uses & Formation"](lang);
+  if (topicLower.includes("reflexive")) return LESSONS["Reflexive Verbs & Daily Routines"](lang);
+  if (topicLower.includes("object pronoun") || topicLower.includes("direct") || topicLower.includes("indirect")) return LESSONS["Object Pronouns: Direct & Indirect"](lang);
+  if (topicLower.includes("accommodation") || topicLower.includes("rental") || topicLower.includes("alquiler") || topicLower.includes("housing")) return LESSONS["Accommodation & Rental Vocabulary"](lang);
+  if (topicLower.includes("subjunctive") || topicLower.includes("subjuntivo")) return LESSONS["Introduction to Subjunctive Mood"](lang);
+  if (topicLower.includes("por") || topicLower.includes("para")) return LESSONS["Por vs Para — Key Differences"](lang);
+  if (topicLower.includes("visa") || topicLower.includes("enrollment") || topicLower.includes("interview")) return LESSONS["Visa & Enrollment Interview Vocabulary"](lang);
+
+  return defaultLesson(topic, lang);
 }

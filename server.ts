@@ -548,11 +548,7 @@ Responde SOLO con JSON plano (sin markdown): {"isBad": true/false, "reason": "ju
 }
 
 function getDefaultTeachers() {
-  return [
-    { id: "teach_1", name: "Mónica Ruiz Castro", subject: "Español A1 - B2", email: "monica.ruiz@espana-study.com", bio: "Profesora nativa con 8 años de experiencia.", phone: "+34 612 345 678", photoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200", rating: 5 },
-    { id: "teach_2", name: "Yassine El Amrani", subject: "PCE Selectividad - Matemáticas y Física", email: "yassine.amrani@espana-study.com", bio: "Doctor por la Universidad de Granada.", phone: "+34 688 123 456", photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200", rating: 5 },
-    { id: "teach_3", name: "Prof. Alberto Sanz", subject: "Español Técnico para FP", email: "alberto.sanz@espana-study.com", bio: "Especialista en terminología técnica.", phone: "+34 633 987 654", photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200", rating: 4.8 }
-  ];
+  return [];
 }
 
 async function startServer() {

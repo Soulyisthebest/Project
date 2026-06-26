@@ -87,24 +87,7 @@ const AdBanner = ({ section, ads, onRender }: { section: string; ads: any[]; onR
   );
 };
 
-const fallbackPremiumVideos = [
-  {
-    id: "vid_fallback_1",
-    title: "Estrategia de Baremación y Admisión en la FP 2026",
-    description: "Vídeo completo paso a paso: Entiende cómo calculan tu nota media, cómo homologar sin cometer errores habituales y cómo posicionarte como candidato prioritario para asegurar tu plaza en cualquier comunidad autónoma de España.",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    pdfUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    price: 19.99
-  },
-  {
-    id: "vid_fallback_2",
-    title: "Estrategia Completa de Homologación de Títulos de Bachillerato",
-    description: "Aprende el procedimiento rápido para legalizar tu título, obtener el volante condicional y acelerar la resolución de tu homologación para no quedar excluido de la matrícula oficial en las universidades públicas españolas.",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    pdfUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    price: 14.99
-  }
-];
+const fallbackPremiumVideos: any[] = [];
 
 const renderVideoEmbed = (url: string) => {
   let embedUrl = url;
@@ -2103,17 +2086,6 @@ export default function App() {
                         <p className="text-xs text-gray-400 leading-snug font-sans">
                           Por favor, completa todos tus datos personales, académicos y de destino reales. Su expediente iniciará con un Score de <strong className="text-emerald-400">0 XP</strong>.
                         </p>
-                        {dbStats?.subscriptionEnabled === false ? (
-                          <div className="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[11px] text-emerald-400 font-sans flex items-center gap-2">
-                            <span>🎁</span>
-                            <span><strong>¡Acceso Libre y Gratuito!</strong> La suscripción de pago mensual ha sido desactivada por el administrador.</span>
-                          </div>
-                        ) : (
-                          <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-300 font-sans flex items-center gap-2">
-                            <span>💶</span>
-                            <span><strong>Membresía Premium:</strong> Requiere una cuota de acceso de {dbStats?.subscriptionPrice || 59}€/mes.</span>
-                          </div>
-                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -4676,6 +4648,22 @@ export default function App() {
                   ? dbStats.premiumVideos 
                   : fallbackPremiumVideos;
 
+                if (videosList.length === 0) {
+                  return (
+                    <div className="text-center py-16 space-y-4">
+                      <div className="text-5xl">🎬</div>
+                      <h3 className="text-lg font-bold text-white">
+                        {lang === "ar" ? "قريباً — فيديوهات حصرية" : "Próximamente — Clases Exclusivas"}
+                      </h3>
+                      <p className="text-sm text-gray-400 max-w-md mx-auto">
+                        {lang === "ar" 
+                          ? "نعمل على إعداد محتوى حصري لمساعدتك في رحلتك نحو إسبانيا. ترقب!" 
+                          : "Estamos preparando formaciones exclusivas para ayudarte en tu camino a España. ¡Mantente atento!"}
+                      </p>
+                    </div>
+                  );
+                }
+
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                     {videosList.map((vid: any) => {
@@ -4749,7 +4737,7 @@ export default function App() {
                     })}
                   </div>
                 );
-              })()}
+                })()}
             </div>
           )}
 
@@ -5212,46 +5200,16 @@ export default function App() {
                 {/* Tutor booking panel */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
-                    {lang === "ar" ? "مدرسون معتمدون ومساعدة في الترجمة:" : "Professeurs Certifiés Particuliers :"}
+                    {lang === "ar" ? "المدرسون والمساعدة:" : lang === "fr" ? "Professeurs & Accompagnement :" : "Profesores & Apoyo :"}
                   </h4>
-                  
-                  {[
-                    { name: "Sra. Leila Alami", av: "👩‍🏫", detail: "Enseignante trilingue espagnol-arabe. Préparation intense aux examens PCE Selectividad." },
-                    { name: "Dr. Karim Belhadj", av: "👨‍🏫", detail: "Spécialiste de la traduction jurée de documents universitaires et lettres de motivation d'études." }
-                  ].map((tut, i) => (
-                    <div key={i} className="bg-[#070a13] border border-[#1b253b] p-4 rounded-xl space-y-3 shadow">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl bg-gray-800 p-1.5 rounded-xl block">{tut.av}</span>
-                        <div>
-                          <h5 className="font-bold text-xs text-white leading-tight">{tut.name}</h5>
-                          <span className="text-[9px] text-amber-500 block">★★★★★ (4.9 Verified)</span>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-gray-400 font-sans leading-normal">{tut.detail}</p>
-                      <button
-                        onClick={() => handleBookTutor(tut.name)}
-                        className="w-full bg-[#1c2438] hover:bg-gray-800 text-gray-300 font-bold text-[10px] py-2 rounded-lg transition-colors border border-gray-800"
-                      >
-                        {lang === "ar" ? "حجز حصة تجريبية" : "Réserver une session"}
-                      </button>
-                    </div>
-                  ))}
-                  <div className="p-3 bg-[#0a0f1d] text-gray-400 rounded-xl text-[10px] space-y-2 border border-[#1b253b] leading-relaxed">
-                    <p className="font-bold text-amber-400 flex items-center gap-1">
-                      🛡️ {lang === "ar" ? "قيد التسجيل والتدريس:" : 
-                           lang === "fr" ? "Accréditation Administrateur Unique :" : 
-                           lang === "es" ? "Acceso Restringido - Solo Administrador:" : 
-                           "Restricted Access - Administrator Only:"}
+                  <div className="text-center py-8 space-y-3 bg-[#070a13] border border-[#1b253b] rounded-2xl">
+                    <div className="text-3xl">🎓</div>
+                    <p className="text-sm font-bold text-white">
+                      {lang === "ar" ? "قريباً" : lang === "fr" ? "Bientôt disponible" : "Próximamente"}
                     </p>
-                    <p className="text-gray-500 text-[9px] leading-relaxed">
-                      {lang === "ar" ? "لا يُسمح لأي طالب بنشر أو إدراج عروض تدرس لغوية. المشرف فقط هو المخول بإضافة وتدقيق عروض مدرسي اللغات لضمان الجودة ومكافحة الاحتيال المالي." :
-                       lang === "fr" ? "Aucun étudiant n'est autorisé à publier une offre de professeur de langue. Seul l'administrateur exclusif a le droit de mettre en ligne des profils académiques." :
-                       lang === "es" ? "Ningún estudiante está autorizado a presentar o publicar una oferta de profesor de idiomas o tutoría. Únicamente el administrador del portal tiene permisos exclusivos para subir ofertas." :
-                       "No student is authorized to upload or post any language tutor or teacher profile. Only the official portal administrator can create or publish tutoring listings to ensure quality."}
+                    <p className="text-xs text-gray-400 max-w-xs mx-auto">
+                      {lang === "ar" ? "سيتم إضافة قائمة الأساتذة قريباً." : lang === "fr" ? "La liste des professeurs sera disponible prochainement." : "La lista de profesores estará disponible próximamente."}
                     </p>
-                    <div className="text-[8px] text-gray-600 border-t border-gray-800 pt-1 font-mono text-center">
-                      Platform preserves a flat 30% safety escrow for dispute protection.
-                    </div>
                   </div>
                 </div>
               </div>

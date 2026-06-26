@@ -1541,6 +1541,7 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
 
           <nav className="flex flex-col gap-1">
             {[
+              { key: "students_list", label: "0. 🆕 Alumnos Inscritos", icon: "👥" },
               { key: "overview", label: "1. Resumen General", icon: "📊" },
               { key: "profile", label: "2. Perfil Alumnos", icon: "👤" },
               { key: "roadmap", label: "3. Funnel de Visado", icon: "🎯" },
@@ -1618,6 +1619,128 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
             </button>
           </div>
         )}
+
+        {/* SECTION 0: LISTADO DE ALUMNOS */}
+        {activeTab === "students_list" && (() => {
+          const today = new Date().toISOString().split("T")[0];
+          const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+          const last7days = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
+          const newToday = students.filter((s: any) => s.registrationDate === today);
+          const newYesterday = students.filter((s: any) => s.registrationDate === yesterday);
+          const newLast7 = students.filter((s: any) => s.registrationDate >= last7days);
+          const [searchQuery, setSearchQuery] = React.useState("");
+          const [filterStatus, setFilterStatus] = React.useState<"all" | "active" | "blocked">("all");
+
+          const filtered = students.filter((s: any) => {
+            const matchSearch = !searchQuery || 
+              s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              s.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              s.phone?.includes(searchQuery) ||
+              s.country?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchStatus = filterStatus === "all" || 
+              (filterStatus === "blocked" && s.isBlocked) ||
+              (filterStatus === "active" && !s.isBlocked);
+            return matchSearch && matchStatus;
+          });
+
+          return (
+            <div className="space-y-6 animate-fade-in">
+              <div>
+                <h3 className="text-lg font-black text-white">0. Alumnos Inscritos</h3>
+                <p className="text-xs text-gray-400">Gestión completa de todos los estudiantes registrados</p>
+              </div>
+
+              {/* Stats rapides */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: "Total Inscritos", value: students.length, icon: "👥", color: "amber" },
+                  { label: "Hoy", value: newToday.length, icon: "🆕", color: "green" },
+                  { label: "Ayer", value: newYesterday.length, icon: "📅", color: "blue" },
+                  { label: "Últimos 7 días", value: newLast7.length, icon: "📊", color: "purple" },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-[#0b1222] border border-[#1c2e4f] rounded-2xl p-4 text-center">
+                    <div className="text-2xl mb-1">{stat.icon}</div>
+                    <div className="text-2xl font-black text-white">{stat.value}</div>
+                    <div className="text-xs text-gray-400 mt-1">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Nouveaux inscrits aujourd'hui */}
+              {newToday.length > 0 && (
+                <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-4 space-y-3">
+                  <h4 className="text-sm font-bold text-green-400">🆕 Nuevos Hoy ({newToday.length})</h4>
+                  <div className="space-y-2">
+                    {newToday.map((s: any) => (
+                      <div key={s.id} className="flex items-center justify-between bg-[#070a13] rounded-xl p-3">
+                        <div>
+                          <p className="text-xs font-bold text-white">{s.name} {s.lastName}</p>
+                          <p className="text-[10px] text-gray-400">{s.email} · {s.country}</p>
+                        </div>
+                        <button
+                          onClick={() => handleToggleStudentBlock(s.id, !!s.isBlocked)}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all ${s.isBlocked ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
+                        >
+                          {s.isBlocked ? "🔓 Desbloquear" : "🔒 Bloquear"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtres et recherche */}
+              <div className="flex gap-3 flex-wrap">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, email, teléfono..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="flex-1 min-w-48 bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-amber-500"
+                />
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value as any)}
+                  className="bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-xs text-white outline-none"
+                >
+                  <option value="all">Todos ({students.length})</option>
+                  <option value="active">Activos ({students.filter((s: any) => !s.isBlocked).length})</option>
+                  <option value="blocked">Bloqueados ({students.filter((s: any) => s.isBlocked).length})</option>
+                </select>
+              </div>
+
+              {/* Lista completa */}
+              <div className="space-y-2">
+                {filtered.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 text-sm">No se encontraron alumnos.</div>
+                ) : filtered.map((s: any, i: number) => (
+                  <div key={s.id} className={`bg-[#0b1222] border rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap ${s.isBlocked ? 'border-red-500/20' : 'border-[#1c2e4f]'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-sm font-black text-amber-400">
+                        {(s.name || "?")[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">{s.name} {s.lastName} {s.isBlocked && <span className="text-red-400 text-[10px]">🔒 BLOQUEADO</span>}</p>
+                        <p className="text-[10px] text-gray-400">{s.email}</p>
+                        <p className="text-[10px] text-gray-500">{s.phone && `📞 ${s.phone} · `}{s.country} → {s.targetCity} · Inscrito: {s.registrationDate}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded-lg font-mono">{s.xp || 0} XP</span>
+                      <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-1 rounded-lg">{s.level || "A1"}</span>
+                      <button
+                        onClick={() => handleToggleStudentBlock(s.id, !!s.isBlocked)}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all cursor-pointer ${s.isBlocked ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-black' : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white'}`}
+                      >
+                        {s.isBlocked ? "🔓 Desbloquear" : "🔒 Bloquear Acceso"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* SECTION 1: OVERVIEW */}
         {activeTab === "overview" && (
