@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
+// vite dev only
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import pg from "pg";
@@ -1401,8 +1401,7 @@ async function startServer() {
 
   // Serve frontend
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
-    app.use(vite.middlewares);
+    // dev mode only
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

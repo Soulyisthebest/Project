@@ -51544,7 +51544,6 @@ var require_lib4 = __commonJS({
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs2 = __toESM(require("fs"));
-var import_vite = require("vite");
 
 // node_modules/@google/genai/dist/node/index.mjs
 var import_p_retry = __toESM(require_p_retry(), 1);
@@ -79755,8 +79754,6 @@ async function startServer() {
     }
   });
   if (process.env.NODE_ENV !== "production") {
-    const vite = await (0, import_vite.createServer)({ server: { middlewareMode: true }, appType: "spa" });
-    app.use(vite.middlewares);
   } else {
     const distPath = import_path.default.join(process.cwd(), "dist");
     app.use(import_express.default.static(distPath));
