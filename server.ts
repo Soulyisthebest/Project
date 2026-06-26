@@ -1399,6 +1399,106 @@ async function startServer() {
     }
   });
 
+  // =============================================
+  // CONSULTATION BOOKING ROUTES
+  // =============================================
+
+  // Get booked slots
+  app.get("/api/consultation/booked-slots", async (req, res) => {
+    try {
+      const bookings = await getCustomData("consultationBookings") || [];
+      const slots = bookings.map((b: any) => `${b.day}-${b.hour}`);
+      res.json({ slots });
+    } catch (e) { res.json({ slots: [] }); }
+  });
+
+  // Create consultation checkout
+  app.post("/api/consultation/create-checkout", async (req, res) => {
+    const { phone, email, day, hour, studentName, studentId, price, signatureName } = req.body;
+    if (!phone || !email || !day || !hour) {
+      return res.status(400).json({ error: "Faltan datos obligatorios." });
+    }
+    try {
+      const consultationPrice = (await getConfig("consultationPrice")) ?? 30;
+      const finalPrice = price || consultationPrice;
+      const baseUrl = process.env.APP_URL || `https://${req.headers.host}`;
+      const stripe = getStripeInstance();
+
+      if (stripe) {
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [{
+            price_data: {
+              currency: "eur",
+              product_data: { name: "Consulta Personalizada R-Consulting", description: `Sesión ${day} a las ${hour} (horario España)` },
+              unit_amount: Math.round(finalPrice * 100),
+            },
+            quantity: 1,
+          }],
+          mode: "payment",
+          customer_email: email,
+          metadata: { phone, email, day, hour, studentName: studentName || "", studentId: studentId || "", signatureName: signatureName || "" },
+          success_url: `${baseUrl}?consultation_success=true&day=${day}&hour=${hour}`,
+          cancel_url: `${baseUrl}?consultation_cancel=true`,
+        });
+        res.json({ url: session.url });
+      } else {
+        res.status(400).json({ error: "Stripe no está configurado. Contacta al administrador." });
+      }
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Error al crear sesión de pago." });
+    }
+  });
+
+  // Consultation payment success webhook
+  app.post("/api/consultation/payment-success", async (req, res) => {
+    const { phone, email, day, hour, studentName, signatureName } = req.body;
+    try {
+      const bookings = await getCustomData("consultationBookings") || [];
+      const newBooking = {
+        id: `consult_${Date.now()}`,
+        phone, email, day, hour,
+        studentName: studentName || "Estudiante",
+        signatureName: signatureName || "",
+        status: "pending",
+        createdAt: new Date().toISOString()
+      };
+      bookings.unshift(newBooking);
+      await setCustomData("consultationBookings", bookings);
+
+      // Alert for admin
+      const alert = {
+        id: `alert_consult_${Date.now()}`,
+        title: `📞 NUEVA CONSULTA RESERVADA: ${studentName || email} — ${day} a las ${hour}. Tel: ${phone}. Email: ${email}`,
+        type: "info",
+        timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+        isViolationUnit: false
+      };
+      await saveAlert(alert);
+
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Error." });
+    }
+  });
+
+  // Get consultation bookings (admin)
+  app.get("/api/consultation/bookings", async (req, res) => {
+    try {
+      const bookings = await getCustomData("consultationBookings") || [];
+      res.json({ bookings });
+    } catch (e) { res.json({ bookings: [] }); }
+  });
+
+  // Update consultation price (admin)
+  app.post("/api/consultation/set-price", async (req, res) => {
+    const { price } = req.body;
+    try {
+      await setConfig("consultationPrice", Number(price));
+      res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: "Error." }); }
+  });
+
   // Serve frontend
   if (process.env.NODE_ENV !== "production") {
     // dev mode only

@@ -79753,6 +79753,97 @@ async function startServer() {
       res.status(500).json({ error: "Ocurri\xF3 un error al desbloquear la compra." });
     }
   });
+  app.get("/api/consultation/booked-slots", async (req, res) => {
+    try {
+      const bookings = await getCustomData("consultationBookings") || [];
+      const slots = bookings.map((b) => `${b.day}-${b.hour}`);
+      res.json({ slots });
+    } catch (e2) {
+      res.json({ slots: [] });
+    }
+  });
+  app.post("/api/consultation/create-checkout", async (req, res) => {
+    const { phone, email, day, hour, studentName, studentId, price, signatureName } = req.body;
+    if (!phone || !email || !day || !hour) {
+      return res.status(400).json({ error: "Faltan datos obligatorios." });
+    }
+    try {
+      const consultationPrice = await getConfig("consultationPrice") ?? 30;
+      const finalPrice = price || consultationPrice;
+      const baseUrl = process.env.APP_URL || `https://${req.headers.host}`;
+      const stripe = getStripeInstance();
+      if (stripe) {
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [{
+            price_data: {
+              currency: "eur",
+              product_data: { name: "Consulta Personalizada R-Consulting", description: `Sesi\xF3n ${day} a las ${hour} (horario Espa\xF1a)` },
+              unit_amount: Math.round(finalPrice * 100)
+            },
+            quantity: 1
+          }],
+          mode: "payment",
+          customer_email: email,
+          metadata: { phone, email, day, hour, studentName: studentName || "", studentId: studentId || "", signatureName: signatureName || "" },
+          success_url: `${baseUrl}?consultation_success=true&day=${day}&hour=${hour}`,
+          cancel_url: `${baseUrl}?consultation_cancel=true`
+        });
+        res.json({ url: session.url });
+      } else {
+        res.status(400).json({ error: "Stripe no est\xE1 configurado. Contacta al administrador." });
+      }
+    } catch (e2) {
+      res.status(500).json({ error: e2.message || "Error al crear sesi\xF3n de pago." });
+    }
+  });
+  app.post("/api/consultation/payment-success", async (req, res) => {
+    const { phone, email, day, hour, studentName, signatureName } = req.body;
+    try {
+      const bookings = await getCustomData("consultationBookings") || [];
+      const newBooking = {
+        id: `consult_${Date.now()}`,
+        phone,
+        email,
+        day,
+        hour,
+        studentName: studentName || "Estudiante",
+        signatureName: signatureName || "",
+        status: "pending",
+        createdAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      bookings.unshift(newBooking);
+      await setCustomData("consultationBookings", bookings);
+      const alert = {
+        id: `alert_consult_${Date.now()}`,
+        title: `\u{1F4DE} NUEVA CONSULTA RESERVADA: ${studentName || email} \u2014 ${day} a las ${hour}. Tel: ${phone}. Email: ${email}`,
+        type: "info",
+        timestamp: (/* @__PURE__ */ new Date()).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+        isViolationUnit: false
+      };
+      await saveAlert(alert);
+      res.json({ success: true });
+    } catch (e2) {
+      res.status(500).json({ error: "Error." });
+    }
+  });
+  app.get("/api/consultation/bookings", async (req, res) => {
+    try {
+      const bookings = await getCustomData("consultationBookings") || [];
+      res.json({ bookings });
+    } catch (e2) {
+      res.json({ bookings: [] });
+    }
+  });
+  app.post("/api/consultation/set-price", async (req, res) => {
+    const { price } = req.body;
+    try {
+      await setConfig("consultationPrice", Number(price));
+      res.json({ success: true });
+    } catch (e2) {
+      res.status(500).json({ error: "Error." });
+    }
+  });
   if (process.env.NODE_ENV !== "production") {
   } else {
     const distPath = import_path.default.join(process.cwd(), "dist");

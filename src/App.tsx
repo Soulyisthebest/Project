@@ -19,6 +19,7 @@ import { getFallbackLessonData } from "./fallbackLessons";
 import { getFallbackExam } from "./fallbackExams";
 import { getSpecialtyDetails } from "./specialtyDetails";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { ConsultationBooking } from "./components/ConsultationBooking";
 import { PRIVACY_POLICY, TERMS_OF_USE, FORBIDDEN_WORDS } from "./policies";
 import { 
   downloadRoadmapPDF, 
@@ -122,6 +123,28 @@ const renderVideoEmbed = (url: string) => {
       allowFullScreen
       referrerPolicy="no-referrer"
     ></iframe>
+  );
+};
+
+
+// Online counter component - simulated
+const OnlineCounter = () => {
+  const [count, setCount] = React.useState(Math.floor(Math.random() * 40) + 85);
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(prev => {
+        const change = Math.random() > 0.5 ? 1 : -1;
+        const next = prev + change;
+        return Math.max(70, Math.min(150, next));
+      });
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <div className="flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/20 rounded-2xl py-2 px-4">
+      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+      <span className="text-xs text-green-400 font-bold">{count} estudiantes estudiando ahora mismo 🎓</span>
+    </div>
   );
 };
 
@@ -5809,6 +5832,17 @@ export default function App() {
           </div>
         );
       })()}
+
+            {tab === "consultation" && (
+        <div className="space-y-6 animate-fade-in p-4">
+          <OnlineCounter />
+          <ConsultationBooking
+            lang={lang}
+            student={loggedStudent}
+            consultationPrice={dbStats?.consultationPrice || 30}
+          />
+        </div>
+      )}
 
       {renderPoliciesModal()}
       {renderSimulatedPaymentModal()}

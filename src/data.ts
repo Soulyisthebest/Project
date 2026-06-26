@@ -30,7 +30,8 @@ export const NAV_ITEMS: NavItem[] = [
   { key: 'vie', icon: '🏪', en: 'Student Life', ar: 'الحياة الطلابية', fr: 'Vie Étudiante', es: 'Vida Estudiantil' },
   { key: 'emploi', icon: '💼', en: 'Employment', ar: 'العمل بعد الدراسة', fr: 'Emploi', es: 'Empleo' },
   { key: 'chat', icon: '💬', en: 'Community', ar: 'المجتمع', fr: 'Communauté', es: 'Comunidad' },
-  { key: 'cv', icon: '📄', en: 'CV Builder', ar: 'منشئ السيرة', fr: 'CV Espagnol', es: 'Generador de CV' }
+  { key: 'cv', icon: '📄', en: 'CV Builder', ar: 'منشئ السيرة', fr: 'CV Espagnol', es: 'Generador de CV' },
+  { key: 'consultation', icon: '📞', en: 'Book a Session', ar: 'احجز جلسة', fr: 'Réserver une Séance', es: 'Reservar Consulta' }
 ];
 
 export interface RoadmapStep {
