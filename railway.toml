@@ -3,7 +3,3 @@ startCommand = "node dist/server.cjs"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
-
-[build]
-builder = "NIXPACKS"
-buildCommand = "echo skip"
