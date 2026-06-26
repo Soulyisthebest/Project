@@ -5,4 +5,4 @@ healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 
 [build]
-buildCommand = "echo done"
+buildCommand = "npm install"
