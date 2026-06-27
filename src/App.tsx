@@ -132,6 +132,75 @@ const OnlineCounter = () => {
 };
 
 export default function App() {
+
+  // =============================================
+  // ANTI-SCREENSHOT & ANTI-DOWNLOAD PROTECTION
+  // =============================================
+  React.useEffect(() => {
+    // 1. CSS protection — black screen on print/screenshot
+    const style = document.createElement("style");
+    style.id = "anti-screenshot-style";
+    style.innerHTML = `
+      @media print {
+        body * { visibility: hidden !important; background: #000 !important; }
+        body::after { content: "🔒 Contenido protegido — Prohibida la reproducción"; visibility: visible !important; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 24px; color: white; background: black; padding: 20px; z-index: 99999; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // 2. Disable right-click context menu
+    const preventContextMenu = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", preventContextMenu);
+
+    // 3. Disable keyboard shortcuts for screenshots and dev tools
+    const preventKeys = (e: KeyboardEvent) => {
+      // PrintScreen
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        document.body.style.opacity = "0";
+        setTimeout(() => { document.body.style.opacity = "1"; }, 300);
+      }
+      // Ctrl+P (print), Ctrl+S (save), Ctrl+U (source), F12 (devtools)
+      if ((e.ctrlKey || e.metaKey) && ["p", "s", "u", "a"].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+      if (e.key === "F12") e.preventDefault();
+      // Ctrl+Shift+I (devtools), Ctrl+Shift+J, Ctrl+Shift+C
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["i", "j", "c"].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", preventKeys);
+
+    // 4. Disable drag on images and videos
+    const preventDrag = (e: DragEvent) => e.preventDefault();
+    document.addEventListener("dragstart", preventDrag);
+
+    // 5. Visibility API — hide content when tab loses focus (anti-screenshot on mobile)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        document.body.style.filter = "blur(20px)";
+        document.body.style.opacity = "0.1";
+      } else {
+        document.body.style.filter = "";
+        document.body.style.opacity = "1";
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // 6. CSS user-select none
+    document.body.style.userSelect = "none";
+    (document.body.style as any).webkitUserSelect = "none";
+
+    return () => {
+      document.removeEventListener("contextmenu", preventContextMenu);
+      document.removeEventListener("keydown", preventKeys);
+      document.removeEventListener("dragstart", preventDrag);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      const s = document.getElementById("anti-screenshot-style");
+      if (s) s.remove();
+    };
+  }, []);
   // --- Portal Gate Access & Real-Time Sync States ---
   const [userRole, setUserRole] = useState<"student" | "admin" | null>(() => {
     return localStorage.getItem("sp_user_role") as any || null;

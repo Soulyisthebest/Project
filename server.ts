@@ -1401,6 +1401,79 @@ async function startServer() {
     }
   });
 
+  // Video upload route — accepts MP4, MOV, AVI, WebM, MKV etc.
+  app.post("/api/admin/upload-video", express.raw({ type: "*/*", limit: "500mb" }), async (req, res) => {
+    try {
+      const adminEmail = req.headers["x-admin-email"] as string;
+      if (!adminEmail) return res.status(403).json({ error: "No autorizado." });
+
+      const contentType = req.headers["content-type"] || "";
+      const boundary = contentType.split("boundary=")[1];
+
+      if (!boundary) return res.status(400).json({ error: "No se recibió el archivo." });
+
+      const body = req.body as Buffer;
+      const bodyStr = body.toString("binary");
+
+      // Extract filename from Content-Disposition
+      const filenameMatch = bodyStr.match(/filename="([^"]+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `video_${Date.now()}.mp4`;
+      const cleanFilename = `${Date.now()}_${filename.replace(/\s+/g, "_")}`;
+
+      // Save to uploads directory
+      const uploadsDir = path.join(process.cwd(), "uploads", "videos");
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+      // Find start of file data (after double CRLF)
+      const boundaryBuffer = Buffer.from(`--${boundary}`);
+      const doubleCRLF = Buffer.from("\r\n\r\n");
+      const bodyBuffer = body;
+
+      let startIdx = -1;
+      for (let i = 0; i < bodyBuffer.length - doubleCRLF.length; i++) {
+        if (bodyBuffer.slice(i, i + doubleCRLF.length).equals(doubleCRLF)) {
+          startIdx = i + doubleCRLF.length;
+          break;
+        }
+      }
+
+      if (startIdx === -1) return res.status(400).json({ error: "Formato de archivo incorrecto." });
+
+      // Find end of file data (before closing boundary)
+      const closingBoundary = Buffer.from(`\r\n--${boundary}--`);
+      let endIdx = bodyBuffer.length;
+      for (let i = startIdx; i < bodyBuffer.length - closingBoundary.length; i++) {
+        if (bodyBuffer.slice(i, i + closingBoundary.length).equals(closingBoundary)) {
+          endIdx = i;
+          break;
+        }
+      }
+
+      const fileBuffer = bodyBuffer.slice(startIdx, endIdx);
+      const filepath = path.join(uploadsDir, cleanFilename);
+      fs.writeFileSync(filepath, fileBuffer);
+
+      const url = `/uploads/videos/${cleanFilename}`;
+      res.json({ success: true, url, filename: cleanFilename });
+    } catch (e: any) {
+      console.error("[Video Upload]", e);
+      res.status(500).json({ error: "Error al procesar el video." });
+    }
+  });
+
+  // Serve uploaded videos securely
+  app.get("/uploads/videos/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const filepath = path.join(process.cwd(), "uploads", "videos", filename);
+    if (!fs.existsSync(filepath)) return res.status(404).json({ error: "Video no encontrado." });
+    // Anti-download headers
+    res.setHeader("Content-Disposition", "inline");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.sendFile(filepath);
+  });
+
   // =============================================
   // CONSULTATION BOOKING ROUTES
   // =============================================

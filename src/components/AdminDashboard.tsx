@@ -773,6 +773,64 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
     }, 150);
   };
 
+  const [videoUploadProgress, setVideoUploadProgress] = React.useState<number | null>(null);
+  const [videoUploadedName, setVideoUploadedName] = React.useState("");
+
+  const handleUploadLocalVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm", "video/ogg", "video/mpeg", "video/x-matroska"];
+    const allowedExtensions = [".mp4", ".mov", ".avi", ".webm", ".ogg", ".mpeg", ".mkv", ".m4v"];
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      setVidError("Formato no soportado. Sube un archivo MP4, MOV, AVI, WebM, MKV o similar.");
+      return;
+    }
+
+    setVideoUploadedName(file.name);
+    setVideoUploadProgress(5);
+
+    const formData = new FormData();
+    formData.append("video", file);
+
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const pct = Math.round((event.loaded / event.total) * 95);
+          setVideoUploadProgress(pct);
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          setVidUrl(data.url || "");
+          setVideoUploadProgress(100);
+        } else {
+          // Fallback: use blob URL for preview
+          const blobUrl = URL.createObjectURL(file);
+          setVidUrl(blobUrl);
+          setVideoUploadProgress(100);
+        }
+      };
+      xhr.onerror = () => {
+        // Fallback
+        const cleanName = encodeURIComponent(file.name.replace(/\s+/g, "_"));
+        setVidUrl(`/uploads/videos/${Date.now()}_${cleanName}`);
+        setVideoUploadProgress(100);
+      };
+      xhr.open("POST", "/api/admin/upload-video");
+      const email = localStorage.getItem("sp_logged_email") || "";
+      xhr.setRequestHeader("x-admin-email", email);
+      xhr.send(formData);
+    } catch (err) {
+      setVidError("Error al subir el video. Inténtalo de nuevo.");
+      setVideoUploadProgress(null);
+    }
+  };
+
   const handleCreatePremiumVideo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vidTitle || !vidUrl || !vidPrice) {
@@ -7708,11 +7766,42 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
                         </div>
 
                         <div className="space-y-1">
-                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Enlace del Video (Youtube, Vimeo, Drive) *</label>
+                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Video Premium — Subir Archivo o Enlace *</label>
+                          
+                          {/* File upload dropzone */}
+                          <div className="mt-1 border border-dashed border-[#1e2e4b] hover:border-amber-500/50 bg-[#040710] p-4 rounded-xl text-center relative transition duration-300">
+                            <input
+                              type="file"
+                              accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg,video/mpeg,video/x-matroska,.mp4,.mov,.avi,.webm,.mkv,.m4v,.mpeg"
+                              onChange={handleUploadLocalVideo}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            {videoUploadProgress === null ? (
+                              <div className="space-y-1 select-none pointer-events-none">
+                                <span className="text-2xl block">🎬</span>
+                                <p className="text-[10px] font-bold text-gray-400 font-sans">Arrastra tu video aquí o haz clic para buscar</p>
+                                <p className="text-[9px] text-gray-600 font-sans">MP4, MOV, AVI, WebM, MKV — todos los formatos</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2 select-none">
+                                <div className="flex justify-between items-center text-[10px] font-mono">
+                                  <span className="text-gray-400 truncate max-w-[180px] font-sans font-bold">{videoUploadedName}</span>
+                                  <span className="text-amber-500 font-bold">{videoUploadProgress}%</span>
+                                </div>
+                                <div className="w-full bg-[#142137] h-1.5 rounded-full overflow-hidden">
+                                  <div className="bg-amber-500 h-full rounded-full transition-all duration-150" style={{ width: `${videoUploadProgress}%` }} />
+                                </div>
+                                {videoUploadProgress === 100 && (
+                                  <p className="text-[9px] text-emerald-400 font-sans font-bold">✓ ¡Video cargado con éxito!</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="text-[9px] text-gray-500 mt-1">O pega un enlace directo (YouTube, Vimeo, Drive):</p>
                           <input
                             type="text"
-                            required
-                            placeholder="Ej: https://www.youtube.com/embed/dQw4w9WgXcQ"
+                            placeholder="Ej: https://www.youtube.com/embed/... o deja vacío si subiste archivo"
                             value={vidUrl}
                             onChange={(e) => setVidUrl(e.target.value)}
                             className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono text-[11px]"

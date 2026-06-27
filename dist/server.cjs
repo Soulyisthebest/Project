@@ -80142,6 +80142,60 @@ async function startServer() {
       res.status(500).json({ error: "Ocurri\xF3 un error al desbloquear la compra." });
     }
   });
+  app.post("/api/admin/upload-video", import_express.default.raw({ type: "*/*", limit: "500mb" }), async (req, res) => {
+    try {
+      const adminEmail = req.headers["x-admin-email"];
+      if (!adminEmail) return res.status(403).json({ error: "No autorizado." });
+      const contentType = req.headers["content-type"] || "";
+      const boundary = contentType.split("boundary=")[1];
+      if (!boundary) return res.status(400).json({ error: "No se recibi\xF3 el archivo." });
+      const body = req.body;
+      const bodyStr = body.toString("binary");
+      const filenameMatch = bodyStr.match(/filename="([^"]+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `video_${Date.now()}.mp4`;
+      const cleanFilename = `${Date.now()}_${filename.replace(/\s+/g, "_")}`;
+      const uploadsDir = import_path.default.join(process.cwd(), "uploads", "videos");
+      if (!import_fs2.default.existsSync(uploadsDir)) import_fs2.default.mkdirSync(uploadsDir, { recursive: true });
+      const boundaryBuffer = Buffer.from(`--${boundary}`);
+      const doubleCRLF = Buffer.from("\r\n\r\n");
+      const bodyBuffer = body;
+      let startIdx = -1;
+      for (let i2 = 0; i2 < bodyBuffer.length - doubleCRLF.length; i2++) {
+        if (bodyBuffer.slice(i2, i2 + doubleCRLF.length).equals(doubleCRLF)) {
+          startIdx = i2 + doubleCRLF.length;
+          break;
+        }
+      }
+      if (startIdx === -1) return res.status(400).json({ error: "Formato de archivo incorrecto." });
+      const closingBoundary = Buffer.from(`\r
+--${boundary}--`);
+      let endIdx = bodyBuffer.length;
+      for (let i2 = startIdx; i2 < bodyBuffer.length - closingBoundary.length; i2++) {
+        if (bodyBuffer.slice(i2, i2 + closingBoundary.length).equals(closingBoundary)) {
+          endIdx = i2;
+          break;
+        }
+      }
+      const fileBuffer = bodyBuffer.slice(startIdx, endIdx);
+      const filepath = import_path.default.join(uploadsDir, cleanFilename);
+      import_fs2.default.writeFileSync(filepath, fileBuffer);
+      const url = `/uploads/videos/${cleanFilename}`;
+      res.json({ success: true, url, filename: cleanFilename });
+    } catch (e2) {
+      console.error("[Video Upload]", e2);
+      res.status(500).json({ error: "Error al procesar el video." });
+    }
+  });
+  app.get("/uploads/videos/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const filepath = import_path.default.join(process.cwd(), "uploads", "videos", filename);
+    if (!import_fs2.default.existsSync(filepath)) return res.status(404).json({ error: "Video no encontrado." });
+    res.setHeader("Content-Disposition", "inline");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.sendFile(filepath);
+  });
   app.get("/api/consultation/booked-slots", async (req, res) => {
     try {
       const bookings = await getCustomData("consultationBookings") || [];
