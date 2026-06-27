@@ -89,28 +89,154 @@ const AdBanner = ({ section, ads, onRender }: { section: string; ads: any[]; onR
 
 const fallbackPremiumVideos: any[] = [];
 
-const renderVideoEmbed = (url: string) => {
-  let embedUrl = url;
+const renderVideoEmbed = (url: string, title?: string) => {
+  if (!url) return null;
+
+  // YouTube
   if (url.includes("youtube.com/watch?v=")) {
     const videoId = url.split("v=")[1]?.split("&")[0];
-    if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
-  } else if (url.includes("youtu.be/")) {
-    const videoId = url.split("youtu.be/")[1]?.split("?")[0];
-    if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    if (videoId) return (
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+        className="w-full h-full rounded-2xl border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        referrerPolicy="no-referrer"
+      />
+    );
   }
+  if (url.includes("youtu.be/")) {
+    const videoId = url.split("youtu.be/")[1]?.split("?")[0];
+    if (videoId) return (
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+        className="w-full h-full rounded-2xl border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  if (url.includes("youtube.com/embed/")) {
+    return (
+      <iframe
+        src={`${url}?rel=0&modestbranding=1`}
+        className="w-full h-full rounded-2xl border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  // Vimeo
+  if (url.includes("vimeo.com/")) {
+    const videoId = url.split("vimeo.com/")[1]?.split("?")[0];
+    if (videoId) return (
+      <iframe
+        src={`https://player.vimeo.com/video/${videoId}?dnt=1`}
+        className="w-full h-full rounded-2xl border-0"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+
+  // Google Drive
+  if (url.includes("drive.google.com")) {
+    let driveEmbedUrl = url;
+    if (url.includes("/view")) driveEmbedUrl = url.replace("/view", "/preview");
+    else if (!url.includes("/preview")) driveEmbedUrl = url + "/preview";
+    return (
+      <iframe
+        src={driveEmbedUrl}
+        className="w-full h-full rounded-2xl border-0"
+        allow="autoplay"
+        allowFullScreen
+      />
+    );
+  }
+
+  // Local file or direct video URL (MP4, MOV, WebM, AVI...)
+  const isVideoFile = /\.(mp4|mov|webm|avi|mkv|m4v|mpeg|ogv)(\?|$)/i.test(url) || url.startsWith("/uploads/");
+  if (isVideoFile) {
+    return (
+      <video
+        className="w-full h-full rounded-2xl object-contain bg-black"
+        controls
+        controlsList="nodownload nofullscreen noremoteplayback"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ maxHeight: "100%" }}
+      >
+        <source src={url} />
+        Tu navegador no soporta la reproducción de video.
+      </video>
+    );
+  }
+
+  // Fallback iframe
   return (
     <iframe
-      src={embedUrl}
+      src={url}
       className="w-full h-full rounded-2xl border-0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allow="autoplay; fullscreen"
       allowFullScreen
-      referrerPolicy="no-referrer"
-    ></iframe>
+    />
   );
 };
 
-
 // Online counter component - simulated
+// Video announcement popup component
+const VideoPopup = ({ popup, lang, onClose }: { popup: any, lang: string, onClose: () => void }) => {
+  if (!popup?.active) return null;
+  const title = lang === "ar" ? popup.titleAr : lang === "fr" ? popup.titleFr : lang === "es" ? popup.titleEs : popup.titleEn;
+  if (!title) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div
+        className="bg-[#0b1222] border-2 border-amber-500/40 rounded-3xl p-6 max-w-sm w-full shadow-2xl shadow-amber-500/10 space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Badge */}
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest font-mono">
+            {lang === "ar" ? "🎬 فيديو جديد" : lang === "fr" ? "🎬 Nouveau Vidéo" : "🎬 Nuevo Vídeo"}
+          </span>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-white font-black text-base leading-snug">{title}</h3>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-2xl text-xs transition"
+          >
+            {lang === "ar" ? "لاحقاً" : lang === "fr" ? "Plus tard" : "Más tarde"}
+          </button>
+          {popup.link && (
+            <a
+              href={popup.link}
+              onClick={onClose}
+              target={popup.link.startsWith("http") ? "_blank" : "_self"}
+              rel="noreferrer"
+              className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-xs transition text-center"
+            >
+              {lang === "ar" ? "اكتشف الآن 🎬" : lang === "fr" ? "Découvrir 🎬" : "Ver ahora 🎬"}
+            </a>
+          )}
+        </div>
+
+        {/* Close */}
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white text-lg">✕</button>
+      </div>
+    </div>
+  );
+};
+
 const OnlineCounter = () => {
   const [count, setCount] = React.useState(Math.floor(Math.random() * 40) + 85);
   React.useEffect(() => {
@@ -132,6 +258,75 @@ const OnlineCounter = () => {
 };
 
 export default function App() {
+
+  // =============================================
+  // ANTI-SCREENSHOT & ANTI-DOWNLOAD PROTECTION
+  // =============================================
+  React.useEffect(() => {
+    // 1. CSS protection — black screen on print/screenshot
+    const style = document.createElement("style");
+    style.id = "anti-screenshot-style";
+    style.innerHTML = `
+      @media print {
+        body * { visibility: hidden !important; background: #000 !important; }
+        body::after { content: "🔒 Contenido protegido — Prohibida la reproducción"; visibility: visible !important; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 24px; color: white; background: black; padding: 20px; z-index: 99999; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // 2. Disable right-click context menu
+    const preventContextMenu = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", preventContextMenu);
+
+    // 3. Disable keyboard shortcuts for screenshots and dev tools
+    const preventKeys = (e: KeyboardEvent) => {
+      // PrintScreen
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        document.body.style.opacity = "0";
+        setTimeout(() => { document.body.style.opacity = "1"; }, 300);
+      }
+      // Ctrl+P (print), Ctrl+S (save), Ctrl+U (source), F12 (devtools)
+      if ((e.ctrlKey || e.metaKey) && ["p", "s", "u", "a"].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+      if (e.key === "F12") e.preventDefault();
+      // Ctrl+Shift+I (devtools), Ctrl+Shift+J, Ctrl+Shift+C
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["i", "j", "c"].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", preventKeys);
+
+    // 4. Disable drag on images and videos
+    const preventDrag = (e: DragEvent) => e.preventDefault();
+    document.addEventListener("dragstart", preventDrag);
+
+    // 5. Visibility API — hide content when tab loses focus (anti-screenshot on mobile)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        document.body.style.filter = "blur(20px)";
+        document.body.style.opacity = "0.1";
+      } else {
+        document.body.style.filter = "";
+        document.body.style.opacity = "1";
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // 6. CSS user-select none
+    document.body.style.userSelect = "none";
+    (document.body.style as any).webkitUserSelect = "none";
+
+    return () => {
+      document.removeEventListener("contextmenu", preventContextMenu);
+      document.removeEventListener("keydown", preventKeys);
+      document.removeEventListener("dragstart", preventDrag);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      const s = document.getElementById("anti-screenshot-style");
+      if (s) s.remove();
+    };
+  }, []);
   // --- Portal Gate Access & Real-Time Sync States ---
   const [userRole, setUserRole] = useState<"student" | "admin" | null>(() => {
     return localStorage.getItem("sp_user_role") as any || null;
@@ -182,6 +377,8 @@ export default function App() {
   };
 
   const [dbStats, setDbStats] = useState<any>(null);
+  const [showVideoPopup, setShowVideoPopup] = useState(false);
+  const [popupShownCount, setPopupShownCount] = useState(0);
   const customFormations = dbStats?.customData?.formations || FORMATIONS;
   const customHousing = dbStats?.customData?.housing || LOGEMENT;
   const customStudentLife = dbStats?.customData?.studentLife || STUDENT_CITIES_GUIDE;
@@ -260,6 +457,32 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setDbStats(data);
+
+        // Show video popup to students (max maxShows times + duration check)
+        if (role === "student" && data.videoPopup?.active && data.videoPopup?.titleEs) {
+          const popupKey = `popup_shown_${data.videoPopup.titleEs?.slice(0, 20)}`;
+          const popupDateKey = `popup_date_${data.videoPopup.titleEs?.slice(0, 20)}`;
+          const shownCount = parseInt(localStorage.getItem(popupKey) || "0");
+          const firstShownDate = localStorage.getItem(popupDateKey);
+          const maxShows = data.videoPopup.maxShows || 3;
+          const durationDays = data.videoPopup.durationDays || 0;
+
+          // Check if duration has expired
+          let expired = false;
+          if (durationDays > 0 && firstShownDate) {
+            const daysSince = (Date.now() - parseInt(firstShownDate)) / (1000 * 60 * 60 * 24);
+            if (daysSince > durationDays) expired = true;
+          }
+
+          if (shownCount < maxShows && !expired) {
+            setTimeout(() => {
+              setShowVideoPopup(true);
+              setPopupShownCount(shownCount);
+              localStorage.setItem(popupKey, String(shownCount + 1));
+              if (!firstShownDate) localStorage.setItem(popupDateKey, String(Date.now()));
+            }, 1500);
+          }
+        }
         
         // Match student profile dynamically from server
         if (role === "student" && matchingEmail) {
@@ -4673,63 +4896,91 @@ export default function App() {
                         vid.price === 0;
 
                       return (
-                        <div key={vid.id} className="bg-[#070b14] border border-[#1b253b] rounded-3xl overflow-hidden flex flex-col justify-between hover:border-amber-500/30 transition duration-300">
-                          {/* Video Thumbnail / Player area */}
-                          <div className="aspect-video bg-gray-950 relative flex items-center justify-center">
+                        <div key={vid.id} className={`bg-[#070b14] border rounded-3xl overflow-hidden flex flex-col hover:border-amber-500/30 transition duration-300 ${isUnlocked ? "border-emerald-500/30" : "border-[#1b253b]"}`}>
+                          
+                          {/* ===== VIDEO PLAYER AREA ===== */}
+                          <div className="aspect-video bg-black relative flex items-center justify-center overflow-hidden">
                             {isUnlocked ? (
+                              /* AFTER PAYMENT — real video player */
                               <div className="w-full h-full">
-                                {renderVideoEmbed(vid.videoUrl)}
+                                {renderVideoEmbed(vid.videoUrl, vid.title)}
                               </div>
                             ) : (
-                              <div className="absolute inset-0 bg-[#070b14]/90 flex flex-col items-center justify-center p-6 text-center space-y-3">
-                                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full text-2xl animate-pulse">
-                                  🔒
+                              /* BEFORE PAYMENT — blurred preview with lock */
+                              <div className="w-full h-full relative">
+                                {/* Blurred video preview */}
+                                <div className="absolute inset-0 overflow-hidden">
+                                  <div className="w-full h-full blur-xl scale-110 opacity-30 pointer-events-none">
+                                    {renderVideoEmbed(vid.videoUrl, vid.title)}
+                                  </div>
                                 </div>
-                                <div className="space-y-1">
-                                  <h4 className="font-bold text-white text-xs uppercase tracking-widest font-mono">Clase Bloqueada</h4>
-                                  <p className="text-[11px] text-gray-500 max-w-xs font-sans">Esta formación requiere pago único de desbloqueo.</p>
+                                {/* Lock overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                                  <div className="w-14 h-14 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-3xl animate-pulse">
+                                    🔒
+                                  </div>
+                                  <div>
+                                    <p className="text-white font-black text-sm uppercase tracking-wider">Contenido Premium</p>
+                                    <p className="text-gray-400 text-xs mt-1">Desbloquea esta clase para ver el contenido completo</p>
+                                  </div>
+                                  <div className="bg-amber-500 text-black font-black text-sm px-5 py-2 rounded-full">
+                                    💶 {vid.price.toFixed(2)}€ — Acceso de por vida
+                                  </div>
                                 </div>
-                                <span className="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-xl text-xs font-mono font-bold">
-                                  €{vid.price.toFixed(2)} Pago Único
-                                </span>
                               </div>
                             )}
                           </div>
 
-                          {/* Content Meta */}
-                          <div className="p-5 space-y-4 flex flex-col justify-between flex-1">
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-start gap-2">
-                                <h3 className="font-bold text-white text-sm leading-tight font-sans">{vid.title}</h3>
-                                {isUnlocked && (
-                                  <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase shrink-0">
-                                    🔓 Desbloqueado
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-400 leading-relaxed font-sans line-clamp-3">{vid.description}</p>
+                          {/* ===== INFO AREA ===== */}
+                          <div className="p-5 space-y-4 flex flex-col flex-1">
+                            
+                            {/* Title — always visible */}
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-black text-white text-sm leading-tight">{vid.title}</h3>
+                              {isUnlocked && (
+                                <span className="shrink-0 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg text-[10px] font-bold font-mono">
+                                  ✅ DESBLOQUEADO
+                                </span>
+                              )}
                             </div>
 
-                            {/* Purchase / Play CTA */}
-                            {!isUnlocked && (
+                            {/* Description — HIDDEN before payment */}
+                            {isUnlocked ? (
+                              <p className="text-xs text-gray-400 leading-relaxed">{vid.description}</p>
+                            ) : (
+                              <div className="relative">
+                                {/* Blurred description preview */}
+                                <p className="text-xs text-gray-400 leading-relaxed blur-sm select-none pointer-events-none line-clamp-3 opacity-60">
+                                  {vid.description}
+                                </p>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className="text-[10px] text-amber-400 font-bold bg-[#070b14]/80 px-3 py-1 rounded-full border border-amber-500/20">
+                                    🔒 Contenido visible tras el pago
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* CTA */}
+                            {!isUnlocked ? (
                               <button
                                 onClick={() => handleInitiateVideoPurchase(vid.id)}
                                 disabled={checkoutProcessing}
-                                className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-55 text-gray-950 font-bold rounded-2xl transition cursor-pointer text-center select-none text-xs font-sans"
+                                className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-black rounded-2xl transition text-sm"
                               >
-                                {checkoutProcessing ? "Cargando..." : `💳 Desbloquear por €${vid.price.toFixed(2)} (Acceso de por vida)`}
+                                {checkoutProcessing ? "Procesando..." : `💳 Desbloquear por €${vid.price.toFixed(2)}`}
                               </button>
-                            )}
-
-                            {isUnlocked && vid.pdfUrl && (
-                              <a
-                                href={vid.pdfUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full py-2.5 bg-red-600/15 hover:bg-red-600/30 text-red-400 hover:text-red-300 font-bold rounded-2xl border border-red-500/20 transition text-center block text-xs font-sans flex items-center justify-center gap-2"
-                              >
-                                <span>📄</span> {lang === "ar" ? "تحميل ملف الـ PDF المرفق" : "Descargar Guía / PDF de la Clase"}
-                              </a>
+                            ) : (
+                              vid.pdfUrl && (
+                                <a
+                                  href={vid.pdfUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="w-full py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold rounded-2xl border border-blue-500/20 transition text-center block text-xs"
+                                >
+                                  📄 Descargar Guía PDF de la Clase
+                                </a>
+                              )
                             )}
                           </div>
                         </div>
@@ -5830,6 +6081,15 @@ export default function App() {
 
       {renderPoliciesModal()}
       {renderSimulatedPaymentModal()}
+
+      {/* Video announcement popup */}
+      {showVideoPopup && userRole === "student" && (
+        <VideoPopup
+          popup={dbStats?.videoPopup}
+          lang={lang}
+          onClose={() => setShowVideoPopup(false)}
+        />
+      )}
     </div>
   );
 }

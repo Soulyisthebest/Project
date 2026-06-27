@@ -773,6 +773,64 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
     }, 150);
   };
 
+  const [videoUploadProgress, setVideoUploadProgress] = React.useState<number | null>(null);
+  const [videoUploadedName, setVideoUploadedName] = React.useState("");
+
+  const handleUploadLocalVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm", "video/ogg", "video/mpeg", "video/x-matroska"];
+    const allowedExtensions = [".mp4", ".mov", ".avi", ".webm", ".ogg", ".mpeg", ".mkv", ".m4v"];
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      setVidError("Formato no soportado. Sube un archivo MP4, MOV, AVI, WebM, MKV o similar.");
+      return;
+    }
+
+    setVideoUploadedName(file.name);
+    setVideoUploadProgress(5);
+
+    const formData = new FormData();
+    formData.append("video", file);
+
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const pct = Math.round((event.loaded / event.total) * 95);
+          setVideoUploadProgress(pct);
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          setVidUrl(data.url || "");
+          setVideoUploadProgress(100);
+        } else {
+          // Fallback: use blob URL for preview
+          const blobUrl = URL.createObjectURL(file);
+          setVidUrl(blobUrl);
+          setVideoUploadProgress(100);
+        }
+      };
+      xhr.onerror = () => {
+        // Fallback
+        const cleanName = encodeURIComponent(file.name.replace(/\s+/g, "_"));
+        setVidUrl(`/uploads/videos/${Date.now()}_${cleanName}`);
+        setVideoUploadProgress(100);
+      };
+      xhr.open("POST", "/api/admin/upload-video");
+      const email = localStorage.getItem("sp_logged_email") || "";
+      xhr.setRequestHeader("x-admin-email", email);
+      xhr.send(formData);
+    } catch (err) {
+      setVidError("Error al subir el video. Inténtalo de nuevo.");
+      setVideoUploadProgress(null);
+    }
+  };
+
   const handleCreatePremiumVideo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vidTitle || !vidUrl || !vidPrice) {
@@ -849,6 +907,74 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
     } catch (err) {
       setVidError("Fallo de red al eliminar el video.");
     }
+  };
+
+  // Edit video state
+  const [editingVid, setEditingVid] = React.useState<any>(null);
+  const [editVidTitle, setEditVidTitle] = React.useState("");
+  const [editVidDesc, setEditVidDesc] = React.useState("");
+  const [editVidPrice, setEditVidPrice] = React.useState("");
+  const [editVidUrl, setEditVidUrl] = React.useState("");
+  const [editVidPdf, setEditVidPdf] = React.useState("");
+  const [editVidLoading, setEditVidLoading] = React.useState(false);
+  const [previewVidId, setPreviewVidId] = React.useState<string | null>(null);
+  const [previewUnlocked, setPreviewUnlocked] = React.useState(false);
+
+  const openEditVid = (vid: any) => {
+    setEditingVid(vid);
+    setEditVidTitle(vid.title || "");
+    setEditVidDesc(vid.description || "");
+    setEditVidPrice(vid.price?.toString() || "");
+    setEditVidUrl(vid.videoUrl || "");
+    setEditVidPdf(vid.pdfUrl || "");
+  };
+
+  const handleUpdateVideo = async () => {
+    if (!editingVid) return;
+    setEditVidLoading(true);
+    try {
+      const email = localStorage.getItem("sp_logged_email") || "";
+      const res = await fetch("/api/admin/videos/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-email": email },
+        body: JSON.stringify({
+          id: editingVid.id,
+          title: editVidTitle,
+          description: editVidDesc,
+          price: Number(editVidPrice),
+          videoUrl: editVidUrl,
+          pdfUrl: editVidPdf
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingVid(null);
+        setVidSuccess("✓ Vídeo actualizado correctamente.");
+        onRefreshStats();
+      } else {
+        setVidError(data.error || "Error al actualizar.");
+      }
+    } catch (e) {
+      setVidError("Error de red.");
+    }
+    setEditVidLoading(false);
+  };
+
+  const renderAdminVideoEmbed = (url: string) => {
+    if (!url) return <div className="w-full h-full bg-gray-900 flex items-center justify-center text-gray-500 text-xs">Sin vídeo</div>;
+    const isFile = /\.(mp4|mov|webm|avi|mkv|m4v)(\?|$)/i.test(url) || url.startsWith("/uploads/");
+    let embedUrl = url;
+    if (url.includes("youtube.com/watch?v=")) embedUrl = `https://www.youtube.com/embed/${url.split("v=")[1]?.split("&")[0]}?rel=0`;
+    else if (url.includes("youtu.be/")) embedUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1]?.split("?")[0]}?rel=0`;
+    else if (url.includes("youtube.com/embed/")) embedUrl = url;
+    else if (url.includes("vimeo.com/")) embedUrl = `https://player.vimeo.com/video/${url.split("vimeo.com/")[1]?.split("?")[0]}`;
+    else if (url.includes("drive.google.com")) embedUrl = url.includes("/preview") ? url : url.replace("/view", "/preview");
+    if (isFile) return (
+      <video controls controlsList="nodownload" className="w-full h-full object-contain bg-black" onContextMenu={e => e.preventDefault()}>
+        <source src={url} />
+      </video>
+    );
+    return <iframe src={embedUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" allowFullScreen />;
   };
 
   const handleUpdateStudentSub = async (studentId: string, statusType: "paid" | "pending" | "free") => {
@@ -7656,237 +7782,403 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
                 </div>
               )}
 
-              {activeTab === "control_videos" && (
-                <div className="space-y-6 animate-fade-in text-gray-200">
-                  <div className="border-b border-[#1c2e4f] pb-3 text-left">
-                    <h3 className="text-lg font-bold font-sans text-white">24. Panel de Gestión de Videos Premium y Stripe</h3>
-                    <p className="text-xs text-gray-400">
-                      Sube, gestiona y pon a la venta masterclasses formativas. Los usuarios finales deberán abonar el precio que fijes para poder desbloquear y reproducir cada video de por vida.
-                    </p>
-                  </div>
+              {activeTab === "control_videos" && (() => {
+  const [adminVidTab, setAdminVidTab] = React.useState<"add"|"catalog"|"popup">("catalog");
+  const [previewVidId2, setPreviewVidId2] = React.useState<string|null>(null);
+  const [previewUnlocked2, setPreviewUnlocked2] = React.useState(false);
+  const [editingVid2, setEditingVid2] = React.useState<any>(null);
+  const [editTitle2, setEditTitle2] = React.useState("");
+  const [editDesc2, setEditDesc2] = React.useState("");
+  const [editPrice2, setEditPrice2] = React.useState("");
+  const [editUrl2, setEditUrl2] = React.useState("");
+  const [editPdf2, setEditPdf2] = React.useState("");
+  const [editLoading2, setEditLoading2] = React.useState(false);
+  const [editSuccess2, setEditSuccess2] = React.useState("");
+  const [videoUploadProgress2, setVideoUploadProgress2] = React.useState<number|null>(null);
+  const [videoUploadedName2, setVideoUploadedName2] = React.useState("");
+  const [popupEs, setPopupEs] = React.useState(dbStats?.videoPopup?.titleEs || "");
+  const [popupFr, setPopupFr] = React.useState(dbStats?.videoPopup?.titleFr || "");
+  const [popupAr, setPopupAr] = React.useState(dbStats?.videoPopup?.titleAr || "");
+  const [popupEn, setPopupEn] = React.useState(dbStats?.videoPopup?.titleEn || "");
+  const [popupLink, setPopupLink] = React.useState(dbStats?.videoPopup?.link || "");
+  const [popupActive, setPopupActive] = React.useState(dbStats?.videoPopup?.active ?? false);
+  const [popupShows, setPopupShows] = React.useState(dbStats?.videoPopup?.maxShows || 3);
+  const [popupDays, setPopupDays] = React.useState(dbStats?.videoPopup?.durationDays || 7);
+  const [popupSaving, setPopupSaving] = React.useState(false);
+  const [popupSaved, setPopupSaved] = React.useState(false);
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
-                    {/* Video Upload Form */}
-                    <div className="bg-[#0b1224] border border-[#1c2e4f] p-6 rounded-3xl space-y-6 lg:col-span-1">
-                      <h4 className="text-sm font-bold uppercase text-amber-500 font-mono tracking-wider flex items-center gap-2">
-                        <span>🎥</span> Añadir Nueva Clase Premium
-                      </h4>
+  const renderVidPlayer = (url: string) => {
+    if (!url) return <div className="w-full h-full bg-gray-900 flex items-center justify-center text-gray-500 text-xs">Sin vídeo</div>;
+    const isFile = /\.(mp4|mov|webm|avi|mkv|m4v)(\?|$)/i.test(url) || url.startsWith("/uploads/");
+    let embedUrl = url;
+    if (url.includes("youtube.com/watch?v=")) embedUrl = `https://www.youtube.com/embed/${url.split("v=")[1]?.split("&")[0]}?rel=0`;
+    else if (url.includes("youtu.be/")) embedUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1]?.split("?")[0]}?rel=0`;
+    else if (url.includes("vimeo.com/")) embedUrl = `https://player.vimeo.com/video/${url.split("vimeo.com/")[1]?.split("?")[0]}`;
+    else if (url.includes("drive.google.com")) embedUrl = url.includes("/preview") ? url : url.replace("/view", "/preview");
+    if (isFile) return (
+      <video controls controlsList="nodownload" className="w-full h-full object-contain bg-black" onContextMenu={e => e.preventDefault()}>
+        <source src={url} />
+      </video>
+    );
+    return <iframe src={embedUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" allowFullScreen />;
+  };
 
-                      {vidError && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-mono">
-                          ⚠️ {vidError}
-                        </div>
-                      )}
-                      {vidSuccess && (
-                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-mono">
-                          ✓ {vidSuccess}
-                        </div>
-                      )}
+  const handleUploadVid2 = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoUploadedName2(file.name);
+    setVideoUploadProgress2(5);
+    const formData = new FormData();
+    formData.append("video", file);
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setVideoUploadProgress2(Math.round(ev.loaded / ev.total * 95)); };
+    xhr.onload = () => {
+      try { const d = JSON.parse(xhr.responseText); setEditUrl2(d.url || ""); } catch {}
+      setVideoUploadProgress2(100);
+    };
+    xhr.onerror = () => { setVideoUploadProgress2(100); };
+    xhr.open("POST", "/api/admin/upload-video");
+    xhr.setRequestHeader("x-admin-email", localStorage.getItem("sp_logged_email") || "");
+    xhr.send(formData);
+  };
 
-                      <form onSubmit={handleCreatePremiumVideo} className="space-y-4 text-xs">
-                        <div className="space-y-1">
-                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Título de la Clase *</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="Ej: Estrategia de Admisión en la FP 2026"
-                            value={vidTitle}
-                            onChange={(e) => setVidTitle(e.target.value)}
-                            className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-sans"
-                          />
-                        </div>
+  const saveEditVid2 = async () => {
+    if (!editingVid2) return;
+    setEditLoading2(true);
+    setEditSuccess2("");
+    const res = await fetch("/api/admin/videos/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" },
+      body: JSON.stringify({ id: editingVid2.id, title: editTitle2, description: editDesc2, price: Number(editPrice2), videoUrl: editUrl2, pdfUrl: editPdf2 })
+    });
+    const d = await res.json();
+    if (d.success) { setEditSuccess2("✅ Guardado."); onRefreshStats(); setTimeout(() => { setEditingVid2(null); setEditSuccess2(""); }, 1500); }
+    setEditLoading2(false);
+  };
 
-                        <div className="space-y-1">
-                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Descripción / Temario</label>
-                          <textarea
-                            placeholder="Ej: Análisis paso a paso de los requisitos para no quedar excluido..."
-                            rows={3}
-                            value={vidDesc}
-                            onChange={(e) => setVidDesc(e.target.value)}
-                            className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-sans resize-none"
-                          />
-                        </div>
+  const savePopup = async () => {
+    setPopupSaving(true);
+    const res = await fetch("/api/admin/video-popup/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" },
+      body: JSON.stringify({ titleEs: popupEs, titleFr: popupFr, titleAr: popupAr, titleEn: popupEn, link: popupLink, active: popupActive, maxShows: Number(popupShows), durationDays: Number(popupDays) })
+    });
+    const d = await res.json();
+    if (d.success) { setPopupSaved(true); onRefreshStats(); setTimeout(() => setPopupSaved(false), 3000); }
+    setPopupSaving(false);
+  };
 
-                        <div className="space-y-1">
-                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Enlace del Video (Youtube, Vimeo, Drive) *</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="Ej: https://www.youtube.com/embed/dQw4w9WgXcQ"
-                            value={vidUrl}
-                            onChange={(e) => setVidUrl(e.target.value)}
-                            className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono text-[11px]"
-                          />
-                        </div>
+  return (
+    <div className="space-y-6 animate-fade-in text-gray-200">
+      <div className="border-b border-[#1c2e4f] pb-3">
+        <h3 className="text-lg font-black text-white">🎥 Gestión de Vídeos Premium</h3>
+        <p className="text-xs text-gray-400 mt-1">Sube vídeos, configura precios, visualiza como estudiante y gestiona anuncios emergentes.</p>
+      </div>
 
-                        <div className="space-y-1">
-                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Enlace del Documento PDF / Guía de Estudio (Opcional)</label>
-                          <input
-                            type="text"
-                            placeholder="Ej: https://midominio.com/guia-admision.pdf"
-                            value={vidPdf}
-                            onChange={(e) => setVidPdf(e.target.value)}
-                            className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono text-[11px]"
-                          />
-                          <span className="text-[9px] text-gray-500 block leading-tight">O si prefieres, sube tu archivo PDF local arrastrándolo a continuación:</span>
-                          
-                          {/* Simulated PDF File Uploader Dropzone */}
-                          <div className="mt-2 border border-dashed border-[#1e2e4b] hover:border-amber-500/50 bg-[#040710] p-4 rounded-xl text-center relative transition duration-300">
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              onChange={handleUploadLocalPDF}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            {pdfUploadProgress === null ? (
-                              <div className="space-y-1 select-none pointer-events-none">
-                                <span className="text-xl block">📄</span>
-                                <p className="text-[10px] font-bold text-gray-400 font-sans">Arrastra aquí tu PDF o haz clic para buscar</p>
-                                <p className="text-[9px] text-gray-600 font-sans">Solo archivos .pdf (Máx. 15MB)</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2 select-none">
-                                <div className="flex justify-between items-center text-[10px] font-mono">
-                                  <span className="text-gray-400 truncate max-w-[180px] font-sans font-bold">{pdfUploadedName}</span>
-                                  <span className="text-amber-500 font-bold">{pdfUploadProgress}%</span>
-                                </div>
-                                <div className="w-full bg-[#142137] h-1.5 rounded-full overflow-hidden">
-                                  <div 
-                                    className="bg-amber-500 h-full rounded-full transition-all duration-150" 
-                                    style={{ width: `${pdfUploadProgress}%` }}
-                                  />
-                                </div>
-                                {pdfUploadProgress === 100 && (
-                                  <p className="text-[9px] text-emerald-400 font-sans font-bold">✓ ¡PDF cargado con éxito en el servidor de streaming!</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
+      {/* Stats bar */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Total Vídeos", value: dbStats?.premiumVideos?.length || 0, icon: "🎬", color: "amber" },
+          { label: "Ventas", value: dbStats?.students?.reduce((a: number, s: any) => a + (s.purchasedVideos?.length || 0), 0) || 0, icon: "💳", color: "green" },
+          { label: "Ingresos est.", value: `€${(dbStats?.students?.reduce((a: number, s: any) => { s.purchasedVideos?.forEach((id: string) => { const v = dbStats?.premiumVideos?.find((x: any) => x.id === id); if (v) a += v.price; }); return a; }, 0) || 0).toFixed(2)}`, icon: "💶", color: "cyan" }
+        ].map((s, i) => (
+          <div key={i} className="bg-[#0b1222] border border-[#1c2e4f] rounded-2xl p-4 text-center">
+            <div className="text-2xl mb-1">{s.icon}</div>
+            <div className="text-xl font-black text-white">{s.value}</div>
+            <div className="text-[10px] text-gray-500 mt-1">{s.label}</div>
+          </div>
+        ))}
+      </div>
 
-                        <div className="space-y-1">
-                          <label className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Precio de Venta (€ Euros) *</label>
-                          <div className="relative">
-                            <span className="absolute left-3.5 top-2.5 text-gray-500 font-sans font-bold">€</span>
-                            <input
-                              type="number"
-                              required
-                              min="0"
-                              step="0.01"
-                              placeholder="19.99"
-                              value={vidPrice}
-                              onChange={(e) => setVidPrice(e.target.value)}
-                              className="w-full bg-[#070b14] border border-[#1b253b] rounded-xl pl-8 pr-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono"
-                            />
-                          </div>
-                        </div>
+      {/* Sub-tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { key: "catalog", label: "📦 Catálogo de Vídeos" },
+          { key: "add", label: "➕ Añadir Vídeo" },
+          { key: "popup", label: "📢 Anuncio Emergente" }
+        ].map(t => (
+          <button key={t.key} onClick={() => setAdminVidTab(t.key as any)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${adminVidTab === t.key ? "bg-amber-500 text-black border-amber-500" : "bg-[#0b1222] text-gray-400 border-[#1c2e4f] hover:border-amber-500"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-                        <button
-                          type="submit"
-                          disabled={vidLoading}
-                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-55 text-gray-950 font-bold rounded-xl transition cursor-pointer text-center select-none"
-                        >
-                          {vidLoading ? "Procesando..." : "🚀 Publicar Video Premium"}
-                        </button>
-                      </form>
+      {/* ========== TAB: CATALOG ========== */}
+      {adminVidTab === "catalog" && (
+        <div className="space-y-6">
+          {(!dbStats?.premiumVideos || dbStats.premiumVideos.length === 0) ? (
+            <div className="bg-[#0b1222] border border-[#1c2e4f] rounded-3xl p-10 text-center space-y-3">
+              <div className="text-4xl">🎬</div>
+              <p className="text-white font-bold">No hay vídeos en el catálogo</p>
+              <p className="text-xs text-gray-500">Ve a "Añadir Vídeo" para subir tu primera clase premium.</p>
+              <button onClick={() => setAdminVidTab("add")} className="px-6 py-2.5 bg-amber-500 text-black font-black rounded-2xl text-sm">➕ Añadir ahora</button>
+            </div>
+          ) : dbStats.premiumVideos.map((vid: any) => (
+            <div key={vid.id} className="bg-[#0b1222] border border-[#1c2e4f] rounded-3xl overflow-hidden">
 
-                      {/* Connection info */}
-                      <div className="bg-[#070b14] border border-[#1b253b] p-4 rounded-2xl space-y-2 text-[11px]">
-                        <h5 className="font-bold text-amber-500 font-mono uppercase tracking-wider font-sans">¿Cómo cobrar con Stripe?</h5>
-                        <p className="text-gray-400 leading-relaxed font-sans">
-                          Para conectar tu cuenta de Stripe real, ve a la configuración de entorno en tu panel y añade tu <strong>STRIPE_SECRET_KEY</strong>.
-                        </p>
-                        <p className="text-gray-400 leading-relaxed font-sans">
-                          Si no la introduces, la plataforma habilitará automáticamente un <strong>Modo de Simulación de Pago Seguro</strong> para que puedas probar el proceso interactivo de compra en vivo sin necesidad de tarjetas reales.
-                        </p>
-                      </div>
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-800 flex-wrap gap-2">
+                <div>
+                  <h5 className="font-black text-white">{vid.title}</h5>
+                  <p className="text-[10px] text-gray-500 font-mono">ID: {vid.id} · €{vid.price?.toFixed(2)}{vid.pdfUrl ? " · 📄 PDF" : ""}</p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={() => { setEditingVid2(editingVid2?.id === vid.id ? null : vid); setEditTitle2(vid.title); setEditDesc2(vid.description); setEditPrice2(vid.price?.toString()); setEditUrl2(vid.videoUrl); setEditPdf2(vid.pdfUrl || ""); setEditSuccess2(""); setVideoUploadProgress2(null); }}
+                    className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition cursor-pointer">
+                    {editingVid2?.id === vid.id ? "✕ Cerrar edición" : "✏️ Editar"}
+                  </button>
+                  <button onClick={() => { setPreviewVidId2(previewVidId2 === vid.id ? null : vid.id); setPreviewUnlocked2(false); }}
+                    className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer">
+                    {previewVidId2 === vid.id ? "✕ Cerrar vista" : "👁️ Ver como estudiante"}
+                  </button>
+                  <button onClick={() => handleDeletePremiumVideo(vid.id)}
+                    className="p-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl transition cursor-pointer">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* EDIT PANEL */}
+              {editingVid2?.id === vid.id && (
+                <div className="p-5 bg-[#040710] border-b border-gray-800 space-y-4">
+                  <p className="text-xs font-black text-amber-400 uppercase tracking-wider">✏️ Editar vídeo</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Título *</label>
+                      <input value={editTitle2} onChange={e => setEditTitle2(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" />
                     </div>
-
-                    {/* Videos Catalog List */}
-                    <div className="bg-[#0b1224] border border-[#1c2e4f] p-6 rounded-3xl space-y-6 lg:col-span-2 flex flex-col justify-between">
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-bold uppercase text-amber-500 font-mono tracking-wider flex items-center gap-2">
-                          <span>📦</span> Catálogo de Videos Premium Disponibles
-                        </h4>
-
-                        {(!dbStats?.premiumVideos || dbStats.premiumVideos.length === 0) ? (
-                          <div className="bg-[#070a13] border border-[#1b253b] p-8 rounded-2xl text-center space-y-2">
-                            <span className="text-3xl block">📁</span>
-                            <h5 className="font-bold text-gray-300 font-sans">No hay videos premium en el catálogo</h5>
-                            <p className="text-xs text-gray-500 max-w-md mx-auto font-sans">
-                              Comienza añadiendo tu primer video a la izquierda. Los estudiantes los verán en una nueva pestaña "Clases Premium" de su aplicación.
-                            </p>
-                          </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Descripción / Temario</label>
+                      <textarea value={editDesc2} onChange={e => setEditDesc2(e.target.value)} rows={3} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500 resize-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Precio (€)</label>
+                      <input type="number" value={editPrice2} onChange={e => setEditPrice2(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">URL del vídeo (o sube uno nuevo)</label>
+                      <input value={editUrl2} onChange={e => setEditUrl2(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="https://youtube.com/..." />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Reemplazar vídeo — subir archivo (MP4, MOV, AVI...)</label>
+                      <div className="border border-dashed border-[#1c2e4f] hover:border-amber-500/50 bg-[#040710] p-3 rounded-xl text-center relative transition">
+                        <input type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,.mp4,.mov,.avi,.webm,.mkv,.m4v" onChange={handleUploadVid2} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                        {videoUploadProgress2 === null ? (
+                          <div className="pointer-events-none text-xs text-gray-500">🎬 Haz clic o arrastra para subir nuevo vídeo</div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {dbStats.premiumVideos.map((vid: any) => (
-                              <div key={vid.id} className="bg-[#070a13] border border-[#1b253b] p-4 rounded-2xl flex flex-col justify-between gap-4">
-                                <div className="space-y-1.5">
-                                  <div className="flex justify-between items-start gap-2">
-                                    <h5 className="font-bold text-white text-xs font-sans leading-tight">{vid.title}</h5>
-                                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-mono text-[10px] font-bold shrink-0">
-                                      €{vid.price.toFixed(2)}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed font-sans">{vid.description || "Sin descripción."}</p>
-                                  <p className="text-[10px] text-gray-500 font-mono truncate">URL: {vid.videoUrl}</p>
-                                  {vid.pdfUrl && (
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                      <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-sans font-bold flex items-center gap-1">
-                                        <span>📄</span> PDF Incluido
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex justify-between items-center border-t border-gray-800/80 pt-3">
-                                  <span className="text-[9px] text-gray-500 font-mono">ID: {vid.id}</span>
-                                  <button
-                                    onClick={() => handleDeletePremiumVideo(vid.id)}
-                                    className="p-1.5 text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 rounded-lg border border-red-500/20 transition cursor-pointer"
-                                    title="Eliminar Video del Catálogo"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
+                          <div className="space-y-1 pointer-events-none">
+                            <div className="flex justify-between text-[10px]"><span className="text-gray-400 truncate max-w-xs">{videoUploadedName2}</span><span className="text-amber-500 font-bold">{videoUploadProgress2}%</span></div>
+                            <div className="w-full bg-gray-800 h-1.5 rounded-full"><div className="bg-amber-500 h-full rounded-full transition-all" style={{width: `${videoUploadProgress2}%`}} /></div>
+                            {videoUploadProgress2 === 100 && <p className="text-[9px] text-emerald-400 font-bold">✓ Vídeo cargado — URL actualizada</p>}
                           </div>
                         )}
                       </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">URL PDF (opcional)</label>
+                      <input value={editPdf2} onChange={e => setEditPdf2(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="https://... o dejar vacío" />
+                    </div>
+                  </div>
+                  {editSuccess2 && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-bold">{editSuccess2}</div>}
+                  <div className="flex gap-3">
+                    <button onClick={() => setEditingVid2(null)} className="flex-1 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-2xl text-sm">Cancelar</button>
+                    <button onClick={saveEditVid2} disabled={editLoading2} className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-sm disabled:opacity-50 transition">
+                      {editLoading2 ? "Guardando..." : "✅ Guardar cambios"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                      {/* Summary Metrics */}
-                      <div className="bg-[#070b14] border border-[#1c2e4f] p-4 rounded-2xl grid grid-cols-3 gap-4 text-center mt-6">
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase font-mono font-bold tracking-wider font-sans">Total Clases</p>
-                          <p className="text-xl font-bold font-mono text-amber-500">{dbStats?.premiumVideos?.length || 0}</p>
+              {/* STUDENT PREVIEW */}
+              {previewVidId2 === vid.id && (
+                <div className="p-5 bg-[#040710] border-b border-gray-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-xs font-black text-white uppercase tracking-wider">👁️ Vista exacta del estudiante</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setPreviewUnlocked2(false)} className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border cursor-pointer transition ${!previewUnlocked2 ? "bg-red-500 text-white border-red-500" : "bg-transparent text-red-400 border-red-500/30"}`}>🔒 Antes del pago</button>
+                      <button onClick={() => setPreviewUnlocked2(true)} className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border cursor-pointer transition ${previewUnlocked2 ? "bg-emerald-500 text-black border-emerald-500" : "bg-transparent text-emerald-400 border-emerald-500/30"}`}>✅ Después del pago</button>
+                    </div>
+                  </div>
+
+                  <div className={`bg-[#070b14] border rounded-3xl overflow-hidden max-w-md mx-auto ${previewUnlocked2 ? "border-emerald-500/30" : "border-[#1b253b]"}`}>
+                    <div className="aspect-video bg-black relative overflow-hidden">
+                      {previewUnlocked2 ? (
+                        <div className="w-full h-full">{renderVidPlayer(vid.videoUrl)}</div>
+                      ) : (
+                        <div className="w-full h-full relative">
+                          <div className="absolute inset-0 blur-xl scale-110 opacity-30 pointer-events-none">{renderVidPlayer(vid.videoUrl)}</div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                            <div className="w-14 h-14 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-3xl animate-pulse">🔒</div>
+                            <p className="text-white font-black text-xs uppercase">Contenido Premium</p>
+                            <div className="bg-amber-500 text-black font-black text-xs px-5 py-2 rounded-full">💶 {vid.price?.toFixed(2)}€</div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase font-mono font-bold tracking-wider font-sans">Ingresos Estimados</p>
-                          <p className="text-xl font-bold font-mono text-emerald-400">
-                            €{(dbStats?.students?.reduce((acc: number, s: any) => {
-                              // Sum purchased videos
-                              if (s.purchasedVideos && dbStats?.premiumVideos) {
-                                s.purchasedVideos.forEach((vidId: string) => {
-                                  const match = dbStats.premiumVideos.find((v: any) => v.id === vidId);
-                                  if (match) acc += match.price;
-                                });
-                              }
-                              return acc;
-                            }, 0) || 0).toFixed(2)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase font-mono font-bold tracking-wider font-sans">Ventas Realizadas</p>
-                          <p className="text-xl font-bold font-mono text-cyan-400">
-                            {dbStats?.students?.reduce((acc: number, s: any) => acc + (s.purchasedVideos?.length || 0), 0) || 0}
-                          </p>
-                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-black text-white text-sm">{vid.title}</h3>
+                        {previewUnlocked2 && <span className="shrink-0 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg text-[10px] font-bold">✅ DESBLOQUEADO</span>}
                       </div>
+                      {previewUnlocked2 ? (
+                        <p className="text-xs text-gray-400">{vid.description}</p>
+                      ) : (
+                        <div className="relative">
+                          <p className="text-xs text-gray-400 blur-sm select-none line-clamp-2 opacity-60">{vid.description}</p>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-[9px] text-amber-400 font-bold bg-[#070b14]/80 px-3 py-1 rounded-full border border-amber-500/20">🔒 Visible tras el pago</span>
+                          </div>
+                        </div>
+                      )}
+                      {!previewUnlocked2 ? (
+                        <div className="w-full py-2.5 bg-amber-500 text-black font-black rounded-2xl text-center text-xs">💳 Desbloquear por €{vid.price?.toFixed(2)}</div>
+                      ) : vid.pdfUrl ? (
+                        <div className="w-full py-2.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-2xl text-center text-xs font-bold">📄 Descargar Guía PDF</div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Quick info */}
+              <div className="px-4 py-3 flex flex-wrap gap-2 text-[10px]">
+                <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-lg font-bold">💶 €{vid.price?.toFixed(2)}</span>
+                {vid.pdfUrl && <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded-lg font-bold">📄 PDF</span>}
+                <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded-lg font-mono truncate max-w-xs">{(vid.videoUrl || "").slice(0, 60)}{(vid.videoUrl || "").length > 60 ? "..." : ""}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ========== TAB: ADD VIDEO ========== */}
+      {adminVidTab === "add" && (
+        <div className="bg-[#0b1222] border border-[#1c2e4f] rounded-3xl p-6 space-y-5 max-w-2xl">
+          <h4 className="text-sm font-black text-amber-400 uppercase tracking-wider">➕ Añadir Nueva Clase Premium</h4>
+          {vidError && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs">⚠️ {vidError}</div>}
+          {vidSuccess && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs">✓ {vidSuccess}</div>}
+          <form onSubmit={handleCreatePremiumVideo} className="space-y-4">
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Título *</label>
+              <input required value={vidTitle} onChange={e => setVidTitle(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="Ej: Preinscripción en FP Grado Superior 2026" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Descripción / Temario</label>
+              <textarea value={vidDesc} onChange={e => setVidDesc(e.target.value)} rows={4} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500 resize-none" placeholder="Describe el contenido del vídeo..." />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Subir vídeo (MP4, MOV, AVI, WebM...)</label>
+              <div className="border border-dashed border-[#1c2e4f] hover:border-amber-500/50 bg-[#040710] p-4 rounded-xl text-center relative transition">
+                <input type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,.mp4,.mov,.avi,.webm,.mkv,.m4v" onChange={handleUploadLocalVideo} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                {videoUploadProgress === null ? (
+                  <div className="pointer-events-none space-y-1"><span className="text-2xl block">🎬</span><p className="text-xs text-gray-400">Arrastra o haz clic — MP4, MOV, AVI, WebM, MKV</p></div>
+                ) : (
+                  <div className="pointer-events-none space-y-1">
+                    <div className="flex justify-between text-[10px]"><span className="text-gray-400 truncate max-w-xs">{videoUploadedName}</span><span className="text-amber-500 font-bold">{videoUploadProgress}%</span></div>
+                    <div className="w-full bg-gray-800 h-1.5 rounded-full"><div className="bg-amber-500 h-full rounded-full transition-all" style={{width: `${videoUploadProgress}%`}} /></div>
+                    {videoUploadProgress === 100 && <p className="text-[9px] text-emerald-400 font-bold">✓ Vídeo cargado</p>}
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] text-gray-500 mt-1">O pega un enlace (YouTube, Vimeo, Drive):</p>
+              <input value={vidUrl} onChange={e => setVidUrl(e.target.value)} className="w-full mt-1 bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="https://youtube.com/embed/..." />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">PDF adjunto (opcional)</label>
+              <input value={vidPdf} onChange={e => setVidPdf(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="https://..." />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Precio (€) *</label>
+              <input type="number" required min="0" step="0.01" value={vidPrice} onChange={e => setVidPrice(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="19.99" />
+            </div>
+            <button type="submit" disabled={vidLoading} className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-sm disabled:opacity-50 transition">
+              {vidLoading ? "Publicando..." : "🚀 Publicar Clase Premium"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ========== TAB: POPUP ========== */}
+      {adminVidTab === "popup" && (
+        <div className="bg-[#0b1222] border border-amber-500/20 rounded-3xl p-6 space-y-5 max-w-2xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-black text-amber-400 uppercase tracking-wider">📢 Anuncio Emergente de Vídeo</h4>
+              <p className="text-[10px] text-gray-500 mt-0.5">Aparece al estudiante cuando entra a la plataforma</p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-xs text-gray-400">{popupActive ? "🟢 Activo" : "⚫ Inactivo"}</span>
+              <div onClick={() => setPopupActive(!popupActive)} className={`w-10 h-5 rounded-full relative cursor-pointer transition-all ${popupActive ? "bg-amber-500" : "bg-gray-700"}`}>
+                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${popupActive ? "left-5" : "left-0.5"}`} />
+              </div>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇪🇸 Título en Español *</label>
+              <input value={popupEs} onChange={e => setPopupEs(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="¡Nuevo vídeo! Preinscripción en FP 2026" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇫🇷 Titre en Français</label>
+              <input value={popupFr} onChange={e => setPopupFr(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="Nouveau vidéo ! Préinscription FP 2026" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇲🇦 العنوان بالعربية</label>
+              <input value={popupAr} onChange={e => setPopupAr(e.target.value)} dir="rtl" className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="فيديو جديد! التسجيل في FP 2026" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇬🇧 Title in English</label>
+              <input value={popupEn} onChange={e => setPopupEn(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="New video! FP enrollment 2026" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔗 Enlace al hacer clic *</label>
+              <input value={popupLink} onChange={e => setPopupLink(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="https://... o ruta interna" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔁 Veces que aparece (por alumno)</label>
+                <select value={popupShows} onChange={e => setPopupShows(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500">
+                  {[1,2,3,5,10].map(n => <option key={n} value={n}>{n} {n===1?"vez":"veces"}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">⏳ Duración del anuncio (días)</label>
+                <select value={popupDays} onChange={e => setPopupDays(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500">
+                  <option value={1}>1 día</option>
+                  <option value={3}>3 días</option>
+                  <option value={7}>7 días</option>
+                  <option value={14}>14 días</option>
+                  <option value={30}>30 días</option>
+                  <option value={0}>Sin límite</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview popup */}
+          <div className="border border-gray-800 rounded-2xl p-4 space-y-2 bg-[#040710]">
+            <p className="text-[10px] text-gray-500 uppercase font-mono">Previsualización del popup:</p>
+            <div className="bg-[#0b1222] border-2 border-amber-500/40 rounded-2xl p-4 space-y-3 max-w-xs">
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"/><span className="text-[10px] text-amber-400 font-bold uppercase">🎬 Nuevo Vídeo</span></div>
+              <p className="text-white font-black text-sm">{popupEs || "Título del anuncio..."}</p>
+              <div className="flex gap-2">
+                <div className="flex-1 py-2 bg-gray-700 text-gray-300 font-bold rounded-xl text-center text-xs">Más tarde</div>
+                <div className="flex-1 py-2 bg-amber-500 text-black font-black rounded-xl text-center text-xs">Ver ahora 🎬</div>
+              </div>
+            </div>
+          </div>
+
+          {popupSaved && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-bold">✅ Anuncio guardado correctamente.</div>}
+          <button onClick={savePopup} disabled={popupSaving} className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-sm disabled:opacity-50 transition">
+            {popupSaving ? "Guardando..." : "💾 Guardar Anuncio Emergente"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+})()}
 
           </main>
         </div>
