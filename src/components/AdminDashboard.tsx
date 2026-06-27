@@ -153,6 +153,7 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
   const [editDesc, setEditDesc] = React.useState("");
   const [editPrice, setEditPrice] = React.useState("");
   const [editUrl, setEditUrl] = React.useState("");
+  const editUrlRef = React.useRef("");
   const [editPdf, setEditPdf] = React.useState("");
   const [editLoading, setEditLoading] = React.useState(false);
   const [editSuccess, setEditSuccess] = React.useState("");
@@ -199,7 +200,7 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
     formData.append("video", file);
     const xhr = new XMLHttpRequest();
     xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setVidUploadProgress(Math.round(ev.loaded / ev.total * 95)); };
-    xhr.onload = () => { try { const d = JSON.parse(xhr.responseText); setEditUrl(d.url || ""); } catch {} setVidUploadProgress(100); };
+    xhr.onload = () => { try { const d = JSON.parse(xhr.responseText); const newUrl = d.url || ""; setEditUrl(newUrl); editUrlRef.current = newUrl; } catch {} setVidUploadProgress(100); };
     xhr.onerror = () => setVidUploadProgress(100);
     xhr.open("POST", "/api/admin/upload-video");
     xhr.setRequestHeader("x-admin-email", localStorage.getItem("sp_logged_email") || "");
@@ -209,10 +210,11 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
   const saveEdit = async () => {
     if (!editingVid) return;
     setEditLoading(true); setEditSuccess("");
+    const finalUrl = editUrlRef.current || editUrl;
     const res = await fetch("/api/admin/videos/update", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" },
-      body: JSON.stringify({ id: editingVid.id, title: editTitle, description: editDesc, price: Number(editPrice), videoUrl: editUrl, pdfUrl: editPdf })
+      body: JSON.stringify({ id: editingVid.id, title: editTitle, description: editDesc, price: Number(editPrice), videoUrl: finalUrl, pdfUrl: editPdf })
     });
     const d = await res.json();
     if (d.success) { setEditSuccess("✅ Guardado."); onRefreshStats(); setTimeout(() => { setEditingVid(null); setEditSuccess(""); }, 1500); }
@@ -275,7 +277,7 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
                   <p className="text-[10px] text-gray-500 font-mono">€{vid.price?.toFixed(2)}{vid.pdfUrl ? " · 📄 PDF" : ""}</p>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  <button onClick={() => { if (editingVid?.id === vid.id) { setEditingVid(null); } else { setEditingVid(vid); setEditTitle(vid.title); setEditDesc(vid.description); setEditPrice(vid.price?.toString()); setEditUrl(vid.videoUrl); setEditPdf(vid.pdfUrl || ""); setEditSuccess(""); setVidUploadProgress(null); }}}
+                  <button onClick={() => { if (editingVid?.id === vid.id) { setEditingVid(null); } else { setEditingVid(vid); setEditTitle(vid.title); setEditDesc(vid.description); setEditPrice(vid.price?.toString()); setEditUrl(vid.videoUrl); editUrlRef.current = vid.videoUrl || ""; setEditPdf(vid.pdfUrl || ""); setEditSuccess(""); setVidUploadProgress(null); }}}
                     className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition cursor-pointer">
                     {editingVid?.id === vid.id ? "✕ Cerrar" : "✏️ Editar"}
                   </button>
