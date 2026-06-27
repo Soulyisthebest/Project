@@ -170,7 +170,7 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
   const [popupSaved, setPopupSaved] = React.useState(false);
 
   const renderVidPlayer = (url: string) => {
-    if (!url) return <div className="w-full h-full bg-gray-900 flex items-center justify-center text-gray-500 text-xs">Sin vídeo</div>;
+    if (!url) return <div className="w-full h-full bg-gray-900 flex items-center justify-center text-gray-500 text-xs">Sin vídeo configurado</div>;
     const isFile = /\.(mp4|mov|webm|avi|mkv|m4v)(\?|$)/i.test(url) || url.startsWith("/uploads/");
     let embedUrl = url;
     if (url.includes("youtube.com/watch?v=")) embedUrl = `https://www.youtube.com/embed/${url.split("v=")[1]?.split("&")[0]}?rel=0`;
@@ -178,6 +178,15 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
     else if (url.includes("vimeo.com/")) embedUrl = `https://player.vimeo.com/video/${url.split("vimeo.com/")[1]?.split("?")[0]}`;
     else if (url.includes("drive.google.com")) embedUrl = url.includes("/preview") ? url : url.replace("/view", "/preview");
     if (isFile) return <video controls controlsList="nodownload" className="w-full h-full object-contain bg-black" onContextMenu={e => e.preventDefault()}><source src={url} /></video>;
+    // Check if it's a known embeddable platform
+    const isEmbeddable = url.includes("youtube.com") || url.includes("youtu.be") || url.includes("vimeo.com") || url.includes("drive.google.com") || isFile;
+    if (!isEmbeddable) return (
+      <div className="w-full h-full bg-gray-950 flex flex-col items-center justify-center gap-2 text-center p-4">
+        <span className="text-2xl">⚠️</span>
+        <p className="text-xs font-bold text-amber-400">URL no reproducible</p>
+        <p className="text-[10px] text-gray-500">Usa YouTube, Vimeo o sube un archivo MP4/MOV</p>
+      </div>
+    );
     return <iframe src={embedUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" allowFullScreen />;
   };
 
@@ -6745,6 +6754,28 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
                       <div className="space-y-4 bg-[#070a13] p-4 rounded-2xl border border-gray-850">
                         <span className="text-xs font-bold font-mono text-amber-400 uppercase block">2. Documentos Requeridos por Consulados (Uno por línea)</span>
                         <div className="grid grid-cols-1 gap-3">
+              {/* Video selector from existing catalog */}
+              {dbStats?.premiumVideos?.length > 0 && (
+                <div className="bg-[#040710] border border-amber-500/10 rounded-2xl p-3 space-y-2">
+                  <label className="text-[10px] text-amber-400 uppercase font-mono font-bold block">📦 Seleccionar vídeo del catálogo (opcional)</label>
+                  <p className="text-[9px] text-gray-500">Haz clic en un vídeo para usar su título e ir a la sección de vídeos al hacer clic</p>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {dbStats.premiumVideos.map((vid: any) => (
+                      <button key={vid.id} onClick={() => {
+                        setPopupEs(`🎬 Nuevo vídeo disponible: ${vid.title}`);
+                        setPopupFr(`🎬 Nouveau vidéo disponible : ${vid.title}`);
+                        setPopupAr(`🎬 فيديو جديد متاح: ${vid.title}`);
+                        setPopupEn(`🎬 New video available: ${vid.title}`);
+                        setPopupLink("videos");
+                      }}
+                        className="w-full text-left px-3 py-2 bg-[#0b1222] hover:bg-amber-500/10 border border-[#1c2e4f] hover:border-amber-500/30 rounded-xl transition cursor-pointer">
+                        <p className="text-xs font-bold text-white truncate">{vid.title}</p>
+                        <p className="text-[9px] text-gray-500">€{vid.price?.toFixed(2)} · Haz clic para seleccionar</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
                           <div>
                             <label className="text-[10px] text-gray-500 uppercase font-mono block mb-1">Español (ES)</label>
                             <textarea 

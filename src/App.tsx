@@ -90,42 +90,38 @@ const AdBanner = ({ section, ads, onRender }: { section: string; ads: any[]; onR
 const fallbackPremiumVideos: any[] = [];
 
 const renderVideoEmbed = (url: string, title?: string) => {
-  if (!url) return null;
+  if (!url) return (
+    <div className="w-full h-full bg-gray-950 flex flex-col items-center justify-center gap-2 text-center p-4">
+      <span className="text-3xl">🎬</span>
+      <p className="text-xs text-gray-400">Vídeo no configurado</p>
+    </div>
+  );
 
   // YouTube
   if (url.includes("youtube.com/watch?v=")) {
     const videoId = url.split("v=")[1]?.split("&")[0];
     if (videoId) return (
-      <iframe
-        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+      <iframe src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
         className="w-full h-full rounded-2xl border-0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        referrerPolicy="no-referrer"
-      />
+        allowFullScreen referrerPolicy="no-referrer" />
     );
   }
   if (url.includes("youtu.be/")) {
     const videoId = url.split("youtu.be/")[1]?.split("?")[0];
     if (videoId) return (
-      <iframe
-        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+      <iframe src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
         className="w-full h-full rounded-2xl border-0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        referrerPolicy="no-referrer"
-      />
+        allowFullScreen referrerPolicy="no-referrer" />
     );
   }
   if (url.includes("youtube.com/embed/")) {
     return (
-      <iframe
-        src={`${url}?rel=0&modestbranding=1`}
+      <iframe src={`${url}${url.includes("?") ? "&" : "?"}rel=0&modestbranding=1`}
         className="w-full h-full rounded-2xl border-0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        referrerPolicy="no-referrer"
-      />
+        allowFullScreen referrerPolicy="no-referrer" />
     );
   }
 
@@ -133,12 +129,9 @@ const renderVideoEmbed = (url: string, title?: string) => {
   if (url.includes("vimeo.com/")) {
     const videoId = url.split("vimeo.com/")[1]?.split("?")[0];
     if (videoId) return (
-      <iframe
-        src={`https://player.vimeo.com/video/${videoId}?dnt=1`}
+      <iframe src={`https://player.vimeo.com/video/${videoId}?dnt=1`}
         className="w-full h-full rounded-2xl border-0"
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowFullScreen
-      />
+        allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
     );
   }
 
@@ -148,90 +141,68 @@ const renderVideoEmbed = (url: string, title?: string) => {
     if (url.includes("/view")) driveEmbedUrl = url.replace("/view", "/preview");
     else if (!url.includes("/preview")) driveEmbedUrl = url + "/preview";
     return (
-      <iframe
-        src={driveEmbedUrl}
-        className="w-full h-full rounded-2xl border-0"
-        allow="autoplay"
-        allowFullScreen
-      />
+      <iframe src={driveEmbedUrl} className="w-full h-full rounded-2xl border-0"
+        allow="autoplay" allowFullScreen />
     );
   }
 
-  // Local file or direct video URL (MP4, MOV, WebM, AVI...)
+  // Local uploaded file or direct video URL
   const isVideoFile = /\.(mp4|mov|webm|avi|mkv|m4v|mpeg|ogv)(\?|$)/i.test(url) || url.startsWith("/uploads/");
   if (isVideoFile) {
     return (
-      <video
-        className="w-full h-full rounded-2xl object-contain bg-black"
-        controls
-        controlsList="nodownload nofullscreen noremoteplayback"
-        disablePictureInPicture
-        onContextMenu={(e) => e.preventDefault()}
-        style={{ maxHeight: "100%" }}
-      >
+      <video className="w-full h-full rounded-2xl object-contain bg-black"
+        controls controlsList="nodownload nofullscreen noremoteplayback"
+        disablePictureInPicture onContextMenu={(e) => e.preventDefault()}>
         <source src={url} />
         Tu navegador no soporta la reproducción de video.
       </video>
     );
   }
 
-  // Fallback iframe
+  // URL is NOT a video (e.g. a website link) — show helpful message
   return (
-    <iframe
-      src={url}
-      className="w-full h-full rounded-2xl border-0"
-      allow="autoplay; fullscreen"
-      allowFullScreen
-    />
+    <div className="w-full h-full bg-gray-950 flex flex-col items-center justify-center gap-3 text-center p-6">
+      <span className="text-4xl">⚠️</span>
+      <p className="text-sm font-bold text-amber-400">URL no es un vídeo reproducible</p>
+      <p className="text-xs text-gray-400 max-w-xs">
+        Esta URL es una página web, no un vídeo. Para reproducir vídeo en la plataforma usa:
+      </p>
+      <div className="text-[10px] text-gray-500 space-y-1 text-left">
+        <p>▸ YouTube: pega el enlace del vídeo</p>
+        <p>▸ Vimeo: pega el enlace del vídeo</p>
+        <p>▸ Archivo: sube un MP4, MOV, AVI...</p>
+      </div>
+    </div>
   );
 };
 
-// Online counter component - simulated
-// Video announcement popup component
-const VideoPopup = ({ popup, lang, onClose }: { popup: any, lang: string, onClose: () => void }) => {
+// Top banner notification — stays on all pages until dismissed
+const VideoBanner = ({ popup, lang, onClose }: { popup: any, lang: string, onClose: () => void }) => {
   if (!popup?.active) return null;
   const title = lang === "ar" ? popup.titleAr : lang === "fr" ? popup.titleFr : lang === "es" ? popup.titleEs : popup.titleEn;
   if (!title) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div
-        className="bg-[#0b1222] border-2 border-amber-500/40 rounded-3xl p-6 max-w-sm w-full shadow-2xl shadow-amber-500/10 space-y-4"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Badge */}
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest font-mono">
-            {lang === "ar" ? "🎬 فيديو جديد" : lang === "fr" ? "🎬 Nouveau Vidéo" : "🎬 Nuevo Vídeo"}
-          </span>
+    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 shadow-lg shadow-amber-500/30">
+      <div className="flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className="text-lg shrink-0">🎬</span>
+          <p className="text-black font-black text-xs truncate">{title}</p>
         </div>
-
-        {/* Title */}
-        <h3 className="text-white font-black text-base leading-snug">{title}</h3>
-
-        {/* Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-2xl text-xs transition"
-          >
-            {lang === "ar" ? "لاحقاً" : lang === "fr" ? "Plus tard" : "Más tarde"}
-          </button>
+        <div className="flex items-center gap-2 shrink-0">
           {popup.link && (
-            <a
-              href={popup.link}
-              onClick={onClose}
+            <a href={popup.link}
               target={popup.link.startsWith("http") ? "_blank" : "_self"}
               rel="noreferrer"
-              className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-xs transition text-center"
-            >
-              {lang === "ar" ? "اكتشف الآن 🎬" : lang === "fr" ? "Découvrir 🎬" : "Ver ahora 🎬"}
+              onClick={onClose}
+              className="px-3 py-1.5 bg-black/20 hover:bg-black/40 text-black font-black text-xs rounded-xl transition whitespace-nowrap">
+              {lang === "ar" ? "اكتشف ←" : lang === "fr" ? "Voir →" : "Ver ahora →"}
             </a>
           )}
+          <button onClick={onClose}
+            className="w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 text-black font-black text-sm flex items-center justify-center transition">
+            ✕
+          </button>
         </div>
-
-        {/* Close */}
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white text-lg">✕</button>
       </div>
     </div>
   );
@@ -2169,7 +2140,7 @@ export default function App() {
 
   if (userRole === "admin") {
     return (
-      <div className="min-h-screen bg-[#070a13] text-gray-200 flex flex-col font-sans select-none antialiased">
+      <div className={`min-h-screen bg-[#070a13] text-gray-200 flex flex-col font-sans select-none antialiased ${showVideoPopup ? "pt-10" : ""}`}>
         <header className="bg-[#0c1222] border-b border-[#1b253b] p-4 flex items-center justify-between flex-wrap gap-4 shadow-lg shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-amber-500 text-[#070a13] w-10 h-10 rounded-xl flex items-center justify-center font-black text-2xl shadow-md font-sans">
@@ -6084,7 +6055,7 @@ export default function App() {
 
       {/* Video announcement popup */}
       {showVideoPopup && userRole === "student" && (
-        <VideoPopup
+        <VideoBanner
           popup={dbStats?.videoPopup}
           lang={lang}
           onClose={() => setShowVideoPopup(false)}
