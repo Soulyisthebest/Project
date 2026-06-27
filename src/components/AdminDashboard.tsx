@@ -412,11 +412,42 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3">
+
+            {/* Selector de vídeos del catálogo */}
+            {dbStats?.premiumVideos?.length > 0 && (
+              <div className="bg-[#040710] border border-amber-500/20 rounded-2xl p-4 space-y-3">
+                <label className="text-[10px] text-amber-400 uppercase font-mono font-bold block">📦 Seleccionar vídeo del catálogo</label>
+                <p className="text-[9px] text-gray-500">Haz clic en un vídeo para rellenar el anuncio automáticamente</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {dbStats.premiumVideos.map((vid: any) => (
+                    <button key={vid.id}
+                      onClick={() => {
+                        setPopupEs(`🎬 ¡Nuevo vídeo! ${vid.title}`);
+                        setPopupFr(`🎬 Nouveau vidéo ! ${vid.title}`);
+                        setPopupAr(`🎬 فيديو جديد! ${vid.title}`);
+                        setPopupEn(`🎬 New video! ${vid.title}`);
+                        setPopupLink("videos");
+                        setPopupActive(true);
+                      }}
+                      className="w-full text-left px-3 py-2.5 bg-[#0b1222] hover:bg-amber-500/10 border border-[#1c2e4f] hover:border-amber-500/40 rounded-xl transition cursor-pointer group">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{vid.title}</p>
+                          <p className="text-[9px] text-gray-500">€{vid.price?.toFixed(2)} · Haz clic para seleccionar</p>
+                        </div>
+                        <span className="text-[10px] text-amber-400 opacity-0 group-hover:opacity-100 transition shrink-0">→ Usar</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇪🇸 Español *</label><input value={popupEs} onChange={e => setPopupEs(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="¡Nuevo vídeo! Preinscripción FP 2026" /></div>
             <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇫🇷 Français</label><input value={popupFr} onChange={e => setPopupFr(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
             <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇲🇦 العربية</label><input value={popupAr} onChange={e => setPopupAr(e.target.value)} dir="rtl" className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
             <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇬🇧 English</label><input value={popupEn} onChange={e => setPopupEn(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
-            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔗 Enlace al hacer clic</label><input value={popupLink} onChange={e => setPopupLink(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
+            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔗 Enlace al hacer clic</label><input value={popupLink} onChange={e => setPopupLink(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="videos, https://..." /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔁 Veces por alumno</label>
                 <select value={popupShows} onChange={e => setPopupShows(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none">

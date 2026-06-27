@@ -190,10 +190,16 @@ const VideoBanner = ({ popup, lang, onClose }: { popup: any, lang: string, onClo
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {popup.link && (
-            <a href={popup.link}
+            <a href={popup.link === "videos" ? "#" : popup.link}
+              onClick={(e) => {
+                if (popup.link === "videos") {
+                  e.preventDefault();
+                  (window as any).__navigateToTab?.("videos");
+                }
+                onClose();
+              }}
               target={popup.link.startsWith("http") ? "_blank" : "_self"}
               rel="noreferrer"
-              onClick={onClose}
               className="px-3 py-1.5 bg-black/20 hover:bg-black/40 text-black font-black text-xs rounded-xl transition whitespace-nowrap">
               {lang === "ar" ? "اكتشف ←" : lang === "fr" ? "Voir →" : "Ver ahora →"}
             </a>
@@ -904,6 +910,12 @@ export default function App() {
   // --- Active Tab and Languages ---
   const [lang, setLang] = useState<string>("fr");
   const [tab, setTab] = useState<string>("roadmap");
+
+  // Expose navigation for banner
+  React.useEffect(() => {
+    (window as any).__navigateToTab = (t: string) => setTab(t);
+    return () => { delete (window as any).__navigateToTab; };
+  }, []);
   const [visaCountry, setVisaCountry] = useState<string>("morocco");
   const [formationTab, setFormationTab] = useState<string>("fp_superior");
   const [selectedCityLife, setSelectedCityLife] = useState<string>("Madrid");
