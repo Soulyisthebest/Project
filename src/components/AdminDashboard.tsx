@@ -43,39 +43,142 @@ interface AdminDashboardProps {
 // KPIs panel for Anuncio Emergente
 function VitrinaKPIs() {
   const [kpis, setKpis] = React.useState<any>(null);
+  const [detail, setDetail] = React.useState<"views"|"clicks"|null>(null);
+  const [search, setSearch] = React.useState("");
+  const [page, setPage] = React.useState(0);
+  const PER_PAGE = 50;
+
   React.useEffect(() => {
     fetch("/api/popup/stats").then(r => r.json()).then(setKpis).catch(() => {});
   }, []);
+
   const ctr = kpis?.views > 0 ? ((kpis.clicks / kpis.views) * 100).toFixed(1) : "0.0";
   const today = new Date().toISOString().split("T")[0];
   const todayViews = kpis?.history?.filter((h: any) => h.date === today && h.type === "view").length || 0;
   const todayClicks = kpis?.history?.filter((h: any) => h.date === today && h.type === "click").length || 0;
+
+  const getFiltered = (type: "view"|"click") => {
+    const list = kpis?.history?.filter((h: any) => h.type === type) || [];
+    if (!search.trim()) return list;
+    return list.filter((h: any) =>
+      h.studentEmail?.toLowerCase().includes(search.toLowerCase()) ||
+      h.date?.includes(search) ||
+      h.title?.toLowerCase().includes(search.toLowerCase())
+    );
+  };
+
   return (
     <div className="bg-[#040710] border border-[#1c2e4f] rounded-2xl p-4 space-y-3">
       <p className="text-[10px] text-amber-400 font-bold uppercase font-mono">📊 KPIs — Anuncio Emergente</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Total Vistas", value: kpis?.views || 0, icon: "👁️" },
-          { label: "Total Clics", value: kpis?.clicks || 0, icon: "👆" },
-          { label: "CTR", value: `${ctr}%`, icon: "📈" },
-          { label: "Hoy", value: `${todayViews}v · ${todayClicks}c`, icon: "📅" },
+          { label: "Total Vistas", value: kpis?.views || 0, icon: "👁️", type: "views" as const },
+          { label: "Total Clics", value: kpis?.clicks || 0, icon: "👆", type: "clicks" as const },
+          { label: "CTR", value: `${ctr}%`, icon: "📈", type: null },
+          { label: "Hoy", value: `${todayViews}v · ${todayClicks}c`, icon: "📅", type: null },
         ].map((kpi, i) => (
-          <div key={i} className="bg-[#0b1222] border border-[#1c2e4f] rounded-xl p-3 text-center">
+          <div key={i}
+            onClick={() => { if (kpi.type) { setDetail(detail === kpi.type ? null : kpi.type); setPage(0); setSearch(""); }}}
+            className={`bg-[#0b1222] border rounded-xl p-3 text-center transition ${kpi.type ? "cursor-pointer hover:border-amber-500/50" : ""} ${detail === kpi.type ? "border-amber-500/50 bg-amber-500/5" : "border-[#1c2e4f]"}`}>
             <div className="text-lg mb-1">{kpi.icon}</div>
             <div className="text-lg font-black text-white">{kpi.value}</div>
             <div className="text-[9px] text-gray-500 mt-0.5">{kpi.label}</div>
+            {kpi.type && <div className="text-[8px] text-amber-500/60 mt-1">clic para ver todos</div>}
           </div>
         ))}
       </div>
-      {kpis?.history?.length > 0 && (
+
+      {/* Full detail panel */}
+      {detail && (() => {
+        const filtered = getFiltered(detail === "views" ? "view" : "click");
+        const totalPages = Math.ceil(filtered.length / PER_PAGE);
+        const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+        return (
+          <div className="bg-[#0b1222] border border-amber-500/20 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-xs text-amber-400 font-bold uppercase font-mono">
+                {detail === "views" ? "👁️ Todas las Vistas" : "👆 Todos los Clics"}
+                <span className="ml-2 text-gray-500 normal-case font-normal">({filtered.length} registros)</span>
+              </p>
+              <button onClick={() => { setDetail(null); setSearch(""); setPage(0); }} className="text-gray-500 hover:text-white text-xs px-2 py-1 bg-gray-800 rounded-lg">✕ Cerrar</button>
+            </div>
+
+            {/* Search */}
+            <input
+              type="text"
+              placeholder="Buscar por email, fecha, título..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(0); }}
+              className="w-full bg-[#040710] border border-[#1c2e4f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+            />
+
+            {/* Table */}
+            {paginated.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-4">Sin registros</p>
+            ) : (
+              <div className="space-y-0 rounded-xl overflow-hidden border border-gray-800">
+                {/* Header */}
+                <div className="grid grid-cols-3 px-3 py-2 bg-gray-900 text-[9px] text-gray-500 uppercase font-mono">
+                  <span>Estudiante</span>
+                  <span>Anuncio</span>
+                  <span className="text-right">Fecha / Hora</span>
+                </div>
+                {/* Rows */}
+                {paginated.map((h: any, i: number) => (
+                  <div key={i} className={`grid grid-cols-3 px-3 py-2 text-[10px] border-t border-gray-800/50 ${i % 2 === 0 ? "bg-[#040710]" : "bg-[#060b18]"}`}>
+                    <span className="text-white font-bold truncate">{h.studentEmail || "Anónimo"}</span>
+                    <span className="text-gray-400 truncate">{h.title?.slice(0, 30) || "—"}</span>
+                    <span className="text-gray-500 text-right font-mono">{h.date} {h.time || ""}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between gap-2">
+                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 text-gray-300 rounded-xl text-xs font-bold transition cursor-pointer">
+                  ← Anterior
+                </button>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  Página {page + 1} de {totalPages} · {filtered.length} registros totales
+                </span>
+                <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 text-gray-300 rounded-xl text-xs font-bold transition cursor-pointer">
+                  Siguiente →
+                </button>
+              </div>
+            )}
+
+            {/* Export CSV */}
+            <button onClick={() => {
+              const csv = ["Email,Anuncio,Fecha,Hora", ...filtered.map((h: any) => `${h.studentEmail||""},${h.title||""},${h.date},${h.time||""}`).join("\n")].join("\n");
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+              a.download = `${detail}_${new Date().toISOString().split("T")[0]}.csv`;
+              a.click();
+            }} className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold transition">
+              📥 Exportar todo como CSV ({filtered.length} registros)
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* Recent history when no detail open */}
+      {!detail && kpis?.history?.length > 0 && (
         <div className="space-y-1 max-h-28 overflow-y-auto">
           <p className="text-[9px] text-gray-600 uppercase font-mono">Historial reciente:</p>
           {kpis.history.slice(0, 10).map((h: any, i: number) => (
             <div key={i} className="flex items-center justify-between text-[9px] px-2 py-1 bg-[#0b1222] rounded-lg">
-              <span className={h.type === "click" ? "text-green-400 font-bold" : "text-blue-400"}>
-                {h.type === "click" ? "👆 Clic" : "👁️ Vista"}
-              </span>
-              <span className="text-gray-500">{h.date}</span>
+              <div className="flex items-center gap-2">
+                <span className={h.type === "click" ? "text-green-400 font-bold" : "text-blue-400"}>
+                  {h.type === "click" ? "👆 Clic" : "👁️ Vista"}
+                </span>
+                <span className="text-gray-400 truncate max-w-32">{h.studentEmail || ""}</span>
+              </div>
+              <span className="text-gray-500">{h.date} {h.time || ""}</span>
             </div>
           ))}
         </div>
@@ -84,10 +187,129 @@ function VitrinaKPIs() {
   );
 }
 
-// ===== STUDENTS LIST PANEL =====
+// Student detail panel — ficha completa
+function StudentDetailPanel({ student, onBack }: { student: any, onBack: () => void }) {
+  const levelLabels: Record<string, string> = { A1: "A1 — Básico", A2: "A2 — Elemental", B1: "B1 — Intermedio", B2: "B2 — Avanzado", C1: "C1 — Dominio", C2: "C2 — Maestría" };
+  const sections = [
+    { label: "Datos Personales", icon: "👤", items: [
+      { k: "Nombre completo", v: `${student.name || ""} ${student.lastName || ""}` },
+      { k: "Email", v: student.email },
+      { k: "Teléfono", v: student.phone || "—" },
+      { k: "Género", v: student.gender || "—" },
+      { k: "Edad", v: student.age ? `${student.age} años` : "—" },
+      { k: "País de origen", v: student.country || "—" },
+      { k: "Ciudad actual", v: student.city || "—" },
+    ]},
+    { label: "Proyecto Académico", icon: "🎓", items: [
+      { k: "Destino en España", v: student.targetCity || "—" },
+      { k: "Formación actual", v: student.currentEducation || "—" },
+      { k: "Meta académica", v: student.academicGoal || "—" },
+      { k: "País actual", v: student.currentCountry || "—" },
+    ]},
+    { label: "Progreso en la Plataforma", icon: "📊", items: [
+      { k: "Código de estudiante", v: student.studentIdCode || student.id },
+      { k: "Fecha de inscripción", v: student.registrationDate || "—" },
+      { k: "Nivel de español", v: levelLabels[student.level] || student.level || "A1" },
+      { k: "XP acumulado", v: `${student.xp || 0} XP` },
+      { k: "Etapa actual", v: `Etapa ${student.subscriptionTier || 1}` },
+      { k: "Racha actual", v: `${student.streak || 0} días` },
+      { k: "Estado", v: student.isBlocked ? "🔒 Bloqueado" : "✅ Activo" },
+    ]},
+    { label: "Actividad", icon: "📈", items: [
+      { k: "Vídeos comprados", v: student.purchasedVideos?.length ? `${student.purchasedVideos.length} vídeo(s)` : "Ninguno" },
+      { k: "Último acceso", v: student.lastLogin || "—" },
+      { k: "Referido por", v: student.referredBy || "—" },
+      { k: "Nivel premium", v: student.premiumStatus ? "Premium" : "Gratuito" },
+    ]},
+  ];
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-bold transition cursor-pointer">← Volver</button>
+        <div>
+          <h3 className="text-lg font-black text-white">{student.name} {student.lastName}</h3>
+          <p className="text-xs text-gray-400 font-mono">{student.email} · {student.studentIdCode || student.id}</p>
+        </div>
+        <div className={`ml-auto px-3 py-1.5 rounded-xl text-xs font-bold border ${student.isBlocked ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>
+          {student.isBlocked ? "🔒 Bloqueado" : "✅ Activo"}
+        </div>
+      </div>
+
+      {/* Avatar + XP */}
+      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-2xl p-5 flex items-center gap-5">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border-2 border-amber-500/30 flex items-center justify-center text-3xl font-black text-amber-400">
+          {(student.name || "?")[0].toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-white font-black text-base">{student.name} {student.lastName}</span>
+            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg text-xs font-bold">{levelLabels[student.level] || "A1"}</span>
+          </div>
+          <div className="flex items-center gap-4 mt-2 flex-wrap">
+            <span className="text-sm text-amber-400 font-black">{student.xp || 0} XP</span>
+            <span className="text-xs text-gray-400">🔥 {student.streak || 0} días racha</span>
+            <span className="text-xs text-gray-400">📅 Desde {student.registrationDate || "—"}</span>
+          </div>
+          {/* XP bar */}
+          <div className="mt-2 w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, ((student.xp || 0) % 1000) / 10)}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Info sections */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sections.map((sec, si) => (
+          <div key={si} className="bg-[#0b1222] border border-[#1c2e4f] rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
+              <span>{sec.icon}</span> {sec.label}
+            </h4>
+            <div className="space-y-2">
+              {sec.items.map((item, ii) => (
+                <div key={ii} className="flex items-start justify-between gap-2 py-1 border-b border-gray-800/50 last:border-0">
+                  <span className="text-[10px] text-gray-500 uppercase font-mono shrink-0">{item.k}</span>
+                  <span className="text-xs text-white font-bold text-right truncate max-w-48">{item.v || "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Purchased videos */}
+      {student.purchasedVideos?.length > 0 && (
+        <div className="bg-[#0b1222] border border-[#1c2e4f] rounded-2xl p-4 space-y-2">
+          <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider">🎬 Vídeos Comprados</h4>
+          {student.purchasedVideos.map((id: string, i: number) => (
+            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[#040710] rounded-xl">
+              <span className="text-green-400 text-xs">✅</span>
+              <span className="text-xs text-gray-300 font-mono">{id}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Badges */}
+      {student.badges?.length > 0 && (
+        <div className="bg-[#0b1222] border border-[#1c2e4f] rounded-2xl p-4 space-y-2">
+          <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider">🏆 Insignias</h4>
+          <div className="flex flex-wrap gap-2">
+            {student.badges.map((b: string, i: number) => (
+              <span key={i} className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-lg text-xs font-bold">{b}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Students list panel
 function StudentsListPanel({ students, handleToggleStudentBlock }: { students: any[], handleToggleStudentBlock: (id: string, blocked: boolean) => void }) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState<"all"|"active"|"blocked">("all");
+  const [selectedStudent, setSelectedStudent] = React.useState<any>(null);
 
   const today = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
@@ -95,6 +317,10 @@ function StudentsListPanel({ students, handleToggleStudentBlock }: { students: a
   const newToday = students.filter((s: any) => s.registrationDate === today);
   const newYesterday = students.filter((s: any) => s.registrationDate === yesterday);
   const newLast7 = students.filter((s: any) => s.registrationDate >= last7days);
+
+  if (selectedStudent) {
+    return <StudentDetailPanel student={selectedStudent} onBack={() => setSelectedStudent(null)} />;
+  }
 
   const filtered = students.filter((s: any) => {
     const matchSearch = !searchQuery ||
@@ -161,7 +387,8 @@ function StudentsListPanel({ students, handleToggleStudentBlock }: { students: a
         {filtered.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">No se encontraron alumnos.</div>
         ) : filtered.map((s: any) => (
-          <div key={s.id} className={`bg-[#0b1222] border rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap ${s.isBlocked ? "border-red-500/20" : "border-[#1c2e4f]"}`}>
+          <div key={s.id} className={`bg-[#0b1222] border rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap cursor-pointer hover:border-amber-500/30 transition ${s.isBlocked ? "border-red-500/20" : "border-[#1c2e4f]"}`}
+            onClick={() => setSelectedStudent(s)}>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-sm font-black text-amber-400">
                 {(s.name || "?")[0].toUpperCase()}
@@ -172,13 +399,14 @@ function StudentsListPanel({ students, handleToggleStudentBlock }: { students: a
                 <p className="text-[10px] text-gray-500">{s.phone && `📞 ${s.phone} · `}{s.country} → {s.targetCity} · Inscrito: {s.registrationDate}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
               <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded-lg font-mono">{s.xp || 0} XP</span>
               <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-1 rounded-lg">{s.level || "A1"}</span>
               <button onClick={() => handleToggleStudentBlock(s.id, !!s.isBlocked)}
                 className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition cursor-pointer ${s.isBlocked ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-black" : "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white"}`}>
-                {s.isBlocked ? "🔓 Desbloquear" : "🔒 Bloquear Acceso"}
+                {s.isBlocked ? "🔓 Desbloquear" : "🔒 Bloquear"}
               </button>
+              <span className="text-[10px] text-amber-400/50">Ver ficha →</span>
             </div>
           </div>
         ))}
@@ -506,6 +734,17 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
                   <option value={1}>1 día</option><option value={3}>3 días</option><option value={7}>7 días</option><option value={14}>14 días</option><option value={30}>30 días</option><option value={0}>Sin límite</option>
                 </select>
               </div>
+            </div>
+
+            {/* Frecuencia diaria */}
+            <div className="bg-[#040710] border border-[#1c2e4f] rounded-xl p-3 space-y-2">
+              <label className="text-[10px] text-amber-400 uppercase font-mono font-bold block">⚡ Frecuencia diaria (si veces &gt; 1)</label>
+              <p className="text-[9px] text-gray-500">¿Con qué frecuencia máxima puede aparecer al mismo estudiante en un día?</p>
+              <select defaultValue={1} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2 text-sm text-white outline-none">
+                <option value={1}>1 vez por día</option>
+                <option value={2}>2 veces por día</option>
+                <option value={3}>3 veces por día (cada sesión)</option>
+              </select>
             </div>
           </div>
           <div className="border border-gray-800 rounded-2xl p-4 bg-[#040710] space-y-2">

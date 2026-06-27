@@ -1549,13 +1549,20 @@ async function startServer() {
   // Track popup views and clicks
   app.post("/api/popup/track", async (req, res) => {
     try {
-      const { type, popupTitle } = req.body;
+      const { type, popupTitle, studentEmail } = req.body;
       const stats = await getConfig("popupStats") || { views: 0, clicks: 0, history: [] };
       if (type === "view") stats.views = (stats.views || 0) + 1;
       if (type === "click") stats.clicks = (stats.clicks || 0) + 1;
       stats.history = stats.history || [];
-      stats.history.unshift({ type, date: new Date().toISOString().split("T")[0], title: popupTitle });
-      if (stats.history.length > 100) stats.history = stats.history.slice(0, 100);
+      const now = new Date();
+      stats.history.unshift({ 
+        type, 
+        date: now.toISOString().split("T")[0], 
+        time: now.toTimeString().slice(0,5),
+        title: popupTitle,
+        studentEmail: studentEmail || "Anónimo"
+      });
+      if (stats.history.length > 10000) stats.history = stats.history.slice(0, 10000);
       await setConfig("popupStats", stats);
       res.json({ success: true });
     } catch (e) { res.json({ success: true }); }

@@ -6157,7 +6157,7 @@ export default function App() {
               await fetch("/api/popup/track", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "view", popupTitle: dbStats?.videoPopup?.titleEs })
+                body: JSON.stringify({ type: "view", popupTitle: dbStats?.videoPopup?.titleEs, studentEmail: loggedStudent?.email })
               });
             } catch (e) {}
           }}
@@ -6166,7 +6166,7 @@ export default function App() {
               await fetch("/api/popup/track", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "click", popupTitle: dbStats?.videoPopup?.titleEs })
+                body: JSON.stringify({ type: "click", popupTitle: dbStats?.videoPopup?.titleEs, studentEmail: loggedStudent?.email })
               });
             } catch (e) {}
           }}
