@@ -511,8 +511,160 @@ function StudentsListPanel({ students, handleToggleStudentBlock }: { students: a
 }
 
 // ===== VIDEOS PANEL =====
+function AnnouncioEmergentePanel({ dbStats, onRefreshStats, popupEs, setPopupEs, popupFr, setPopupFr, popupAr, setPopupAr, popupEn, setPopupEn, popupLink, setPopupLink, popupActive, setPopupActive, popupShows, setPopupShows, popupDays, setPopupDays, popupSaved, setPopupSaved, popupSaving, setPopupSaving }: any) {
+  const [announcements, setAnnouncements] = React.useState<any[]>(dbStats?.announcements || []);
+  const [editingAnn, setEditingAnn] = React.useState<any>(null);
+  const [kpiAnn, setKpiAnn] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    fetch("/api/admin/announcements").then(r => r.json()).then(d => setAnnouncements(d.announcements || [])).catch(() => {});
+  }, [popupSaved]);
+
+  const toggleAnn = async (id: string, active: boolean) => {
+    await fetch("/api/admin/announcement/toggle", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" }, body: JSON.stringify({ id, active }) });
+    setAnnouncements((prev: any[]) => prev.map((a: any) => a.id === id ? { ...a, active } : a));
+  };
+
+  const deleteAnn = async (id: string) => {
+    if (!confirm("¿Eliminar este anuncio?")) return;
+    await fetch("/api/admin/announcement/delete", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" }, body: JSON.stringify({ id }) });
+    setAnnouncements((prev: any[]) => prev.filter((a: any) => a.id !== id));
+  };
+
+  const startEdit = (ann: any) => {
+    setEditingAnn(ann);
+    setPopupEs(ann.titleEs || ""); setPopupFr(ann.titleFr || ""); setPopupAr(ann.titleAr || ""); setPopupEn(ann.titleEn || "");
+    setPopupLink(ann.link || ""); setPopupActive(ann.active ?? false); setPopupShows(ann.maxShows || 3); setPopupDays(ann.durationDays || 7);
+  };
+
+  const handleSave = async () => {
+    setPopupSaving(true);
+    const res = await fetch("/api/admin/video-popup/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" },
+      body: JSON.stringify({ id: editingAnn?.id || null, titleEs: popupEs, titleFr: popupFr, titleAr: popupAr, titleEn: popupEn, link: popupLink, active: popupActive, maxShows: Number(popupShows), durationDays: Number(popupDays) })
+    });
+    const d = await res.json();
+    if (d.success) {
+      setAnnouncements(d.announcements || []);
+      setPopupSaved(true);
+      setEditingAnn(null);
+      setPopupEs(""); setPopupFr(""); setPopupAr(""); setPopupEn(""); setPopupLink("");
+      onRefreshStats();
+      setTimeout(() => setPopupSaved(false), 3000);
+    }
+    setPopupSaving(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {kpiAnn && <AnnouncementKPIs ann={kpiAnn} onClose={() => setKpiAnn(null)} />}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Form */}
+        <div className="bg-[#0b1222] border border-amber-500/20 rounded-3xl p-5 space-y-4">
+          <h4 className="text-sm font-black text-amber-400 uppercase">{editingAnn ? "✏️ Editar Anuncio" : "➕ Nuevo Anuncio Emergente"}</h4>
+          {dbStats?.premiumVideos?.length > 0 && (
+            <div className="bg-[#040710] border border-amber-500/10 rounded-2xl p-3 space-y-2">
+              <label className="text-[10px] text-amber-400 uppercase font-mono font-bold block">📦 Seleccionar del catálogo</label>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {dbStats.premiumVideos.map((vid: any) => (
+                  <button key={vid.id} onClick={() => { setPopupEs(`🎬 ¡Nuevo vídeo! ${vid.title}`); setPopupFr(`🎬 Nouveau vidéo ! ${vid.title}`); setPopupAr(`🎬 فيديو جديد! ${vid.title}`); setPopupEn(`🎬 New video! ${vid.title}`); setPopupLink("videos"); setPopupActive(true); }}
+                    className="w-full text-left px-3 py-2 bg-[#0b1222] hover:bg-amber-500/10 border border-[#1c2e4f] hover:border-amber-500/30 rounded-xl transition cursor-pointer">
+                    <p className="text-xs font-bold text-white truncate">{vid.title}</p>
+                    <p className="text-[9px] text-gray-500">€{vid.price?.toFixed(2)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-3">
+            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇪🇸 Español *</label><input value={popupEs} onChange={e => setPopupEs(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
+            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇫🇷 Français</label><input value={popupFr} onChange={e => setPopupFr(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
+            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇲🇦 العربية</label><input value={popupAr} onChange={e => setPopupAr(e.target.value)} dir="rtl" className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
+            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇬🇧 English</label><input value={popupEn} onChange={e => setPopupEn(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
+            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔗 Enlace</label><input value={popupLink} onChange={e => setPopupLink(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="videos o https://..." /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔁 Veces</label>
+                <select value={popupShows} onChange={e => setPopupShows(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none">
+                  {[1,2,3,5,10].map(n => <option key={n} value={n}>{n} {n===1?"vez":"veces"}</option>)}
+                </select>
+              </div>
+              <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">⏳ Duración</label>
+                <select value={popupDays} onChange={e => setPopupDays(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none">
+                  <option value={1}>1 día</option><option value={3}>3 días</option><option value={7}>7 días</option><option value={14}>14 días</option><option value={30}>30 días</option><option value={0}>Sin límite</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-[#040710] border border-[#1c2e4f] rounded-xl">
+              <span className="text-xs text-gray-400">Estado</span>
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPopupActive(!popupActive)}>
+                <span className="text-xs font-bold">{popupActive ? "🟢 Activo" : "⚫ Inactivo"}</span>
+                <div className={`w-10 h-5 rounded-full relative transition-all ${popupActive ? "bg-amber-500" : "bg-gray-700"}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${popupActive ? "left-5" : "left-0.5"}`} /></div>
+              </div>
+            </div>
+          </div>
+          {popupSaved && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-bold">✅ {editingAnn ? "Actualizado." : "Anuncio creado."}</div>}
+          <div className="flex gap-3">
+            {editingAnn && <button onClick={() => { setEditingAnn(null); setPopupEs(""); setPopupFr(""); setPopupAr(""); setPopupEn(""); setPopupLink(""); }} className="flex-1 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-2xl text-sm">Cancelar</button>}
+            <button onClick={handleSave} disabled={popupSaving} className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-sm disabled:opacity-50 transition">
+              {popupSaving ? "Guardando..." : editingAnn ? "✅ Guardar cambios" : "💾 Crear Anuncio"}
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="space-y-4">
+          <h4 className="text-sm font-black text-white uppercase">📋 Mis Anuncios ({announcements.length})</h4>
+          {announcements.length === 0 ? (
+            <div className="bg-[#0b1222] border border-[#1c2e4f] rounded-3xl p-8 text-center">
+              <p className="text-3xl mb-2">📢</p><p className="text-sm text-gray-400">Crea tu primer anuncio</p>
+            </div>
+          ) : announcements.map((ann: any) => {
+            const ctr = ann.stats?.views > 0 ? ((ann.stats.clicks / ann.stats.views) * 100).toFixed(1) : "0.0";
+            return (
+              <div key={ann.id} className={`bg-[#0b1222] border rounded-2xl p-4 space-y-3 ${ann.active ? "border-amber-500/30" : "border-[#1c2e4f]"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-white truncate">{ann.titleEs}</p>
+                    <p className="text-[10px] text-gray-500 font-mono mt-0.5">{ann.createdAt?.split("T")[0]}</p>
+                  </div>
+                  <div className="flex items-center gap-1 cursor-pointer shrink-0" onClick={() => toggleAnn(ann.id, !ann.active)}>
+                    <span className="text-[10px] font-bold">{ann.active ? "🟢" : "⚫"}</span>
+                    <div className={`w-8 h-4 rounded-full relative transition-all ${ann.active ? "bg-amber-500" : "bg-gray-700"}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${ann.active ? "left-4" : "left-0.5"}`} />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setKpiAnn(ann)} className="bg-[#040710] border border-[#1c2e4f] hover:border-blue-500/30 rounded-xl p-2 text-center cursor-pointer transition">
+                    <div className="text-sm font-black text-blue-400">{ann.stats?.views || 0}</div>
+                    <div className="text-[9px] text-gray-500">👁️ Vistas</div>
+                  </button>
+                  <button onClick={() => setKpiAnn(ann)} className="bg-[#040710] border border-[#1c2e4f] hover:border-green-500/30 rounded-xl p-2 text-center cursor-pointer transition">
+                    <div className="text-sm font-black text-green-400">{ann.stats?.clicks || 0}</div>
+                    <div className="text-[9px] text-gray-500">👆 Clics</div>
+                  </button>
+                  <div className="bg-[#040710] border border-[#1c2e4f] rounded-xl p-2 text-center">
+                    <div className="text-sm font-black text-amber-400">{ctr}%</div>
+                    <div className="text-[9px] text-gray-500">📈 CTR</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => startEdit(ann)} className="flex-1 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition cursor-pointer">✏️ Editar</button>
+                  <button onClick={() => setKpiAnn(ann)} className="flex-1 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer">📊 KPIs</button>
+                  <button onClick={() => deleteAnn(ann.id)} className="py-1.5 px-3 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer">🗑️</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidDesc, setVidDesc, vidUrl, setVidUrl, vidPdf, setVidPdf, vidPrice, setVidPrice, vidLoading, vidError, vidSuccess, handleCreatePremiumVideo, handleDeletePremiumVideo, videoUploadProgress, videoUploadedName, handleUploadLocalVideo }: any) {
-  const [adminVidTab, setAdminVidTab] = React.useState<"add"|"catalog"|"popup">("catalog");
+  const [adminVidTab, setAdminVidTab] = React.useState<"catalog"|"add"|"popup">("catalog");
   const [previewVidId, setPreviewVidId] = React.useState<string|null>(null);
   const [previewUnlocked, setPreviewUnlocked] = React.useState(false);
   const [editingVid, setEditingVid] = React.useState<any>(null);
@@ -534,8 +686,8 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
   const [popupActive, setPopupActive] = React.useState(dbStats?.videoPopup?.active ?? false);
   const [popupShows, setPopupShows] = React.useState(dbStats?.videoPopup?.maxShows || 3);
   const [popupDays, setPopupDays] = React.useState(dbStats?.videoPopup?.durationDays || 7);
-  const [popupSaving, setPopupSaving] = React.useState(false);
   const [popupSaved, setPopupSaved] = React.useState(false);
+  const [popupSaving, setPopupSaving] = React.useState(false);
 
   const renderVidPlayer = (url: string) => {
     if (!url) return <div className="w-full h-full bg-gray-900 flex items-center justify-center text-gray-500 text-xs">Sin vídeo configurado</div>;
@@ -545,29 +697,27 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
     else if (url.includes("youtu.be/")) embedUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1]?.split("?")[0]}?rel=0`;
     else if (url.includes("vimeo.com/")) embedUrl = `https://player.vimeo.com/video/${url.split("vimeo.com/")[1]?.split("?")[0]}`;
     else if (url.includes("drive.google.com")) embedUrl = url.includes("/preview") ? url : url.replace("/view", "/preview");
-    if (isFile) return <video controls controlsList="nodownload" className="w-full h-full object-contain bg-black" onContextMenu={e => e.preventDefault()}><source src={url} /></video>;
-    // Check if it's a known embeddable platform
     const isEmbeddable = url.includes("youtube.com") || url.includes("youtu.be") || url.includes("vimeo.com") || url.includes("drive.google.com") || isFile;
     if (!isEmbeddable) return (
       <div className="w-full h-full bg-gray-950 flex flex-col items-center justify-center gap-2 text-center p-4">
         <span className="text-2xl">⚠️</span>
         <p className="text-xs font-bold text-amber-400">URL no reproducible</p>
-        <p className="text-[10px] text-gray-500">Usa YouTube, Vimeo o sube un archivo MP4/MOV</p>
+        <p className="text-[10px] text-gray-500">Usa YouTube, Vimeo o sube MP4/MOV</p>
       </div>
     );
+    if (isFile) return <video controls controlsList="nodownload" className="w-full h-full object-contain bg-black" onContextMenu={e => e.preventDefault()}><source src={url} /></video>;
     return <iframe src={embedUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" allowFullScreen />;
   };
 
-  const handleUploadVidEdit = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadVidEdit = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setVidUploadedName(file.name);
-    setVidUploadProgress(5);
+    setVidUploadedName(file.name); setVidUploadProgress(5);
     const formData = new FormData();
     formData.append("video", file);
     const xhr = new XMLHttpRequest();
     xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setVidUploadProgress(Math.round(ev.loaded / ev.total * 95)); };
-    xhr.onload = () => { try { const d = JSON.parse(xhr.responseText); const newUrl = d.url || ""; setEditUrl(newUrl); editUrlRef.current = newUrl; } catch {} setVidUploadProgress(100); };
+    xhr.onload = () => { try { const d = JSON.parse(xhr.responseText); const u = d.url || ""; setEditUrl(u); editUrlRef.current = u; } catch {} setVidUploadProgress(100); };
     xhr.onerror = () => setVidUploadProgress(100);
     xhr.open("POST", "/api/admin/upload-video");
     xhr.setRequestHeader("x-admin-email", localStorage.getItem("sp_logged_email") || "");
@@ -584,28 +734,17 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
       body: JSON.stringify({ id: editingVid.id, title: editTitle, description: editDesc, price: Number(editPrice), videoUrl: finalUrl, pdfUrl: editPdf })
     });
     const d = await res.json();
-    if (d.success) { setEditSuccess("✅ Guardado."); onRefreshStats(); setTimeout(() => { setEditingVid(null); setEditSuccess(""); }, 1500); }
+    if (d.success) { setEditSuccess("✅ Guardado."); onRefreshStats(); setTimeout(() => { setEditingVid(null); setEditSuccess(""); setVidUploadProgress(null); }, 1500); }
     setEditLoading(false);
-  };
-
-  const savePopup = async () => {
-    setPopupSaving(true);
-    const res = await fetch("/api/admin/video-popup/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" },
-      body: JSON.stringify({ titleEs: popupEs, titleFr: popupFr, titleAr: popupAr, titleEn: popupEn, link: popupLink, active: popupActive, maxShows: Number(popupShows), durationDays: Number(popupDays) })
-    });
-    const d = await res.json();
-    if (d.success) { setPopupSaved(true); onRefreshStats(); setTimeout(() => setPopupSaved(false), 3000); }
-    setPopupSaving(false);
   };
 
   return (
     <div className="space-y-6 animate-fade-in text-gray-200">
       <div className="border-b border-[#1c2e4f] pb-3">
         <h3 className="text-lg font-black text-white">🎥 Gestión de Vídeos Premium</h3>
-        <p className="text-xs text-gray-400 mt-1">Sube vídeos, configura precios, visualiza como estudiante y gestiona Anuncio Emergentes.</p>
+        <p className="text-xs text-gray-400 mt-1">Sube vídeos, configura precios y gestiona Anuncios Emergentes.</p>
       </div>
+
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "Total Vídeos", value: dbStats?.premiumVideos?.length || 0, icon: "🎬" },
@@ -619,8 +758,9 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
           </div>
         ))}
       </div>
+
       <div className="flex gap-2 flex-wrap">
-        {[{ key: "catalog", label: "📦 Catálogo" }, { key: "add", label: "➕ Añadir Vídeo" }, { key: "popup", label: "🎯 Anuncio Emergente" }].map(t => (
+        {[{ key: "catalog", label: "📦 Catálogo" }, { key: "add", label: "➕ Añadir Vídeo" }, { key: "popup", label: "📢 Anuncio Emergente" }].map(t => (
           <button key={t.key} onClick={() => setAdminVidTab(t.key as any)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${adminVidTab === t.key ? "bg-amber-500 text-black border-amber-500" : "bg-[#0b1222] text-gray-400 border-[#1c2e4f] hover:border-amber-500"}`}>
             {t.label}
@@ -648,13 +788,11 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
                     className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition cursor-pointer">
                     {editingVid?.id === vid.id ? "✕ Cerrar" : "✏️ Editar"}
                   </button>
-                  <button onClick={() => { setPreviewVidId(previewVidId === vid.id ? null : vid.id); setPreviewUnlocked(false); }}
+                  <button onClick={() => setPreviewVidId(previewVidId === vid.id ? null : vid.id)}
                     className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer">
                     {previewVidId === vid.id ? "✕ Cerrar" : "👁️ Ver como alumno"}
                   </button>
-                  <button onClick={() => handleDeletePremiumVideo(vid.id)} className="p-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl transition cursor-pointer">
-                    🗑️
-                  </button>
+                  <button onClick={() => handleDeletePremiumVideo(vid.id)} className="p-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl transition cursor-pointer">🗑️</button>
                 </div>
               </div>
 
@@ -665,7 +803,7 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
                     <div className="md:col-span-2"><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Título *</label><input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
                     <div className="md:col-span-2"><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Descripción</label><textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500 resize-none" /></div>
                     <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Precio (€)</label><input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
-                    <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">URL vídeo</label><input value={editUrl} onChange={e => setEditUrl(e.target.value)} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
+                    <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">URL vídeo</label><input value={editUrl} onChange={e => { setEditUrl(e.target.value); editUrlRef.current = e.target.value; }} className="w-full bg-[#0b1222] border border-[#1c2e4f] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
                     <div className="md:col-span-2">
                       <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Reemplazar vídeo (MP4, MOV, AVI...)</label>
                       <div className="border border-dashed border-[#1c2e4f] hover:border-amber-500/50 bg-[#040710] p-3 rounded-xl text-center relative transition">
@@ -751,7 +889,7 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
               <label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">Subir vídeo (MP4, MOV, AVI...)</label>
               <div className="border border-dashed border-[#1c2e4f] hover:border-amber-500/50 bg-[#040710] p-4 rounded-xl text-center relative transition">
                 <input type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,.mp4,.mov,.avi,.webm,.mkv" onChange={handleUploadLocalVideo} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                {videoUploadProgress === null ? <div className="pointer-events-none space-y-1"><span className="text-2xl block">🎬</span><p className="text-xs text-gray-400">Arrastra o haz clic — todos los formatos</p></div> : (
+                {videoUploadProgress === null ? <div className="pointer-events-none space-y-1"><span className="text-2xl block">🎬</span><p className="text-xs text-gray-400">Arrastra o haz clic</p></div> : (
                   <div className="pointer-events-none space-y-1">
                     <div className="flex justify-between text-[10px]"><span className="text-gray-400 truncate max-w-xs">{videoUploadedName}</span><span className="text-amber-500 font-bold">{videoUploadProgress}%</span></div>
                     <div className="w-full bg-gray-800 h-1.5 rounded-full"><div className="bg-amber-500 h-full rounded-full" style={{width:`${videoUploadProgress}%`}} /></div>
@@ -769,178 +907,22 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
         </div>
       )}
 
-      {adminVidTab === "popup" && (() => {
-  const [kpiAnn, setKpiAnn] = React.useState<any>(null);
-  const [announcements, setAnnouncements] = React.useState<any[]>(dbStats?.announcements || []);
-  const [editingAnn, setEditingAnn] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    fetch("/api/admin/announcements").then(r => r.json()).then(d => setAnnouncements(d.announcements || [])).catch(() => {});
-  }, [popupSaved]);
-
-  const toggleAnn = async (id: string, active: boolean) => {
-    await fetch("/api/admin/announcement/toggle", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" }, body: JSON.stringify({ id, active }) });
-    setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, active } : a));
-  };
-
-  const deleteAnn = async (id: string) => {
-    if (!confirm("¿Eliminar este anuncio?")) return;
-    await fetch("/api/admin/announcement/delete", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" }, body: JSON.stringify({ id }) });
-    setAnnouncements(prev => prev.filter(a => a.id !== id));
-  };
-
-  const startEdit = (ann: any) => {
-    setEditingAnn(ann);
-    setPopupEs(ann.titleEs || ""); setPopupFr(ann.titleFr || ""); setPopupAr(ann.titleAr || ""); setPopupEn(ann.titleEn || "");
-    setPopupLink(ann.link || ""); setPopupActive(ann.active ?? false); setPopupShows(ann.maxShows || 3); setPopupDays(ann.durationDays || 7);
-  };
-
-  const handleSave = async () => {
-    setPopupSaving(true);
-    const res = await fetch("/api/admin/video-popup/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-email": localStorage.getItem("sp_logged_email") || "" },
-      body: JSON.stringify({ id: editingAnn?.id || null, titleEs: popupEs, titleFr: popupFr, titleAr: popupAr, titleEn: popupEn, link: popupLink, active: popupActive, maxShows: Number(popupShows), durationDays: Number(popupDays) })
-    });
-    const d = await res.json();
-    if (d.success) {
-      setAnnouncements(d.announcements || []);
-      setPopupSaved(true);
-      setEditingAnn(null);
-      setPopupEs(""); setPopupFr(""); setPopupAr(""); setPopupEn(""); setPopupLink("");
-      onRefreshStats();
-      setTimeout(() => setPopupSaved(false), 3000);
-    }
-    setPopupSaving(false);
-  };
-
-  return (
-    <div className="space-y-6">
-      {kpiAnn && <AnnouncementKPIs ann={kpiAnn} onClose={() => setKpiAnn(null)} />}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* LEFT — Form */}
-        <div className="bg-[#0b1222] border border-amber-500/20 rounded-3xl p-5 space-y-4">
-          <h4 className="text-sm font-black text-amber-400 uppercase">
-            {editingAnn ? "✏️ Editar Anuncio" : "➕ Nuevo Anuncio Emergente"}
-          </h4>
-
-          {/* Video selector */}
-          {dbStats?.premiumVideos?.length > 0 && (
-            <div className="bg-[#040710] border border-amber-500/10 rounded-2xl p-3 space-y-2">
-              <label className="text-[10px] text-amber-400 uppercase font-mono font-bold block">📦 Seleccionar del catálogo</label>
-              <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                {dbStats.premiumVideos.map((vid: any) => (
-                  <button key={vid.id} onClick={() => {
-                    setPopupEs(`🎬 ¡Nuevo vídeo! ${vid.title}`);
-                    setPopupFr(`🎬 Nouveau vidéo ! ${vid.title}`);
-                    setPopupAr(`🎬 فيديو جديد! ${vid.title}`);
-                    setPopupEn(`🎬 New video! ${vid.title}`);
-                    setPopupLink("videos"); setPopupActive(true);
-                  }} className="w-full text-left px-3 py-2 bg-[#0b1222] hover:bg-amber-500/10 border border-[#1c2e4f] hover:border-amber-500/30 rounded-xl transition cursor-pointer">
-                    <p className="text-xs font-bold text-white truncate">{vid.title}</p>
-                    <p className="text-[9px] text-gray-500">€{vid.price?.toFixed(2)} · Haz clic para seleccionar</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇪🇸 Español *</label><input value={popupEs} onChange={e => setPopupEs(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="¡Nuevo vídeo!" /></div>
-            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇫🇷 Français</label><input value={popupFr} onChange={e => setPopupFr(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
-            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇲🇦 العربية</label><input value={popupAr} onChange={e => setPopupAr(e.target.value)} dir="rtl" className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
-            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🇬🇧 English</label><input value={popupEn} onChange={e => setPopupEn(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" /></div>
-            <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔗 Enlace al hacer clic</label><input value={popupLink} onChange={e => setPopupLink(e.target.value)} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-amber-500" placeholder="videos o https://..." /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">🔁 Veces</label>
-                <select value={popupShows} onChange={e => setPopupShows(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none">
-                  {[1,2,3,5,10].map(n => <option key={n} value={n}>{n} {n===1?"vez":"veces"}</option>)}
-                </select>
-              </div>
-              <div><label className="text-[10px] text-gray-400 uppercase font-mono block mb-1">⏳ Duración</label>
-                <select value={popupDays} onChange={e => setPopupDays(Number(e.target.value))} className="w-full bg-[#070a13] border border-[#1b253b] rounded-xl px-3 py-2.5 text-sm text-white outline-none">
-                  <option value={1}>1 día</option><option value={3}>3 días</option><option value={7}>7 días</option><option value={14}>14 días</option><option value={30}>30 días</option><option value={0}>Sin límite</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-[#040710] border border-[#1c2e4f] rounded-xl">
-              <span className="text-xs text-gray-400">Estado del anuncio</span>
-              <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPopupActive(!popupActive)}>
-                <span className="text-xs font-bold text-gray-300">{popupActive ? "🟢 Activo" : "⚫ Inactivo"}</span>
-                <div className={`w-10 h-5 rounded-full relative transition-all ${popupActive ? "bg-amber-500" : "bg-gray-700"}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${popupActive ? "left-5" : "left-0.5"}`} /></div>
-              </div>
-            </div>
-          </div>
-
-          {popupSaved && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-bold">✅ {editingAnn ? "Anuncio actualizado." : "Anuncio creado y visible en la lista."}</div>}
-          <div className="flex gap-3">
-            {editingAnn && <button onClick={() => { setEditingAnn(null); setPopupEs(""); setPopupFr(""); setPopupAr(""); setPopupEn(""); setPopupLink(""); }} className="flex-1 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-2xl text-sm">Cancelar</button>}
-            <button onClick={handleSave} disabled={popupSaving} className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl text-sm disabled:opacity-50 transition">
-              {popupSaving ? "Guardando..." : editingAnn ? "✅ Guardar cambios" : "💾 Crear Anuncio"}
-            </button>
-          </div>
-        </div>
-
-        {/* RIGHT — Announcements list */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-black text-white uppercase tracking-wider">📋 Mis Anuncios ({announcements.length})</h4>
-          {announcements.length === 0 ? (
-            <div className="bg-[#0b1222] border border-[#1c2e4f] rounded-3xl p-8 text-center space-y-2">
-              <p className="text-3xl">📢</p>
-              <p className="text-sm text-gray-400">Aún no hay anuncios. Crea el primero.</p>
-            </div>
-          ) : announcements.map((ann: any) => {
-            const ctr = ann.stats?.views > 0 ? ((ann.stats.clicks / ann.stats.views) * 100).toFixed(1) : "0.0";
-            return (
-              <div key={ann.id} className={`bg-[#0b1222] border rounded-2xl p-4 space-y-3 ${ann.active ? "border-amber-500/30" : "border-[#1c2e4f]"}`}>
-                {/* Header */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-white truncate">{ann.titleEs}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5 font-mono">{ann.createdAt?.split("T")[0]} · {ann.link || "—"}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="flex items-center gap-1 cursor-pointer" onClick={() => toggleAnn(ann.id, !ann.active)}>
-                      <span className={`text-[10px] font-bold ${ann.active ? "text-amber-400" : "text-gray-500"}`}>{ann.active ? "🟢" : "⚫"}</span>
-                      <div className={`w-8 h-4 rounded-full relative transition-all ${ann.active ? "bg-amber-500" : "bg-gray-700"}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${ann.active ? "left-4" : "left-0.5"}`} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mini KPIs */}
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => setKpiAnn({ ...ann, _detail: "views" })} className="bg-[#040710] border border-[#1c2e4f] hover:border-blue-500/30 rounded-xl p-2 text-center cursor-pointer transition">
-                    <div className="text-sm font-black text-blue-400">{ann.stats?.views || 0}</div>
-                    <div className="text-[9px] text-gray-500">👁️ Vistas</div>
-                  </button>
-                  <button onClick={() => setKpiAnn({ ...ann, _detail: "clicks" })} className="bg-[#040710] border border-[#1c2e4f] hover:border-green-500/30 rounded-xl p-2 text-center cursor-pointer transition">
-                    <div className="text-sm font-black text-green-400">{ann.stats?.clicks || 0}</div>
-                    <div className="text-[9px] text-gray-500">👆 Clics</div>
-                  </button>
-                  <div className="bg-[#040710] border border-[#1c2e4f] rounded-xl p-2 text-center">
-                    <div className="text-sm font-black text-amber-400">{ctr}%</div>
-                    <div className="text-[9px] text-gray-500">📈 CTR</div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button onClick={() => startEdit(ann)} className="flex-1 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition cursor-pointer">✏️ Editar</button>
-                  <button onClick={() => setKpiAnn(ann)} className="flex-1 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer">📊 Ver KPIs</button>
-                  <button onClick={() => deleteAnn(ann.id)} className="py-1.5 px-3 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition cursor-pointer">🗑️</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-})()}
+      {adminVidTab === "popup" && (
+        <AnnouncioEmergentePanel
+          dbStats={dbStats}
+          onRefreshStats={onRefreshStats}
+          popupEs={popupEs} setPopupEs={setPopupEs}
+          popupFr={popupFr} setPopupFr={setPopupFr}
+          popupAr={popupAr} setPopupAr={setPopupAr}
+          popupEn={popupEn} setPopupEn={setPopupEn}
+          popupLink={popupLink} setPopupLink={setPopupLink}
+          popupActive={popupActive} setPopupActive={setPopupActive}
+          popupShows={popupShows} setPopupShows={setPopupShows}
+          popupDays={popupDays} setPopupDays={setPopupDays}
+          popupSaved={popupSaved} setPopupSaved={setPopupSaved}
+          popupSaving={popupSaving} setPopupSaving={setPopupSaving}
+        />
+      )}
     </div>
   );
 }
