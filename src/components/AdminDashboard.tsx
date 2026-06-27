@@ -7903,40 +7903,111 @@ export function AdminDashboard({ lang, onLogout, dbStats, onRefreshStats, t }: A
                             <span className="text-3xl block">📁</span>
                             <h5 className="font-bold text-gray-300 font-sans">No hay videos premium en el catálogo</h5>
                             <p className="text-xs text-gray-500 max-w-md mx-auto font-sans">
-                              Comienza añadiendo tu primer video a la izquierda. Los estudiantes los verán en una nueva pestaña "Clases Premium" de su aplicación.
+                              Comienza añadiendo tu primer video a la izquierda.
                             </p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-8">
                             {dbStats.premiumVideos.map((vid: any) => (
-                              <div key={vid.id} className="bg-[#070a13] border border-[#1b253b] p-4 rounded-2xl flex flex-col justify-between gap-4">
-                                <div className="space-y-1.5">
-                                  <div className="flex justify-between items-start gap-2">
-                                    <h5 className="font-bold text-white text-xs font-sans leading-tight">{vid.title}</h5>
-                                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-mono text-[10px] font-bold shrink-0">
-                                      €{vid.price.toFixed(2)}
-                                    </span>
+                              <div key={vid.id} className="bg-[#070a13] border border-[#1b253b] rounded-3xl overflow-hidden">
+                                
+                                {/* Header */}
+                                <div className="flex items-center justify-between p-4 border-b border-gray-800">
+                                  <div>
+                                    <h5 className="font-black text-white text-sm">{vid.title}</h5>
+                                    <p className="text-[10px] text-gray-500 font-mono mt-0.5">ID: {vid.id} · Precio: €{vid.price?.toFixed(2)}</p>
                                   </div>
-                                  <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed font-sans">{vid.description || "Sin descripción."}</p>
-                                  <p className="text-[10px] text-gray-500 font-mono truncate">URL: {vid.videoUrl}</p>
-                                  {vid.pdfUrl && (
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                      <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-sans font-bold flex items-center gap-1">
-                                        <span>📄</span> PDF Incluido
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex justify-between items-center border-t border-gray-800/80 pt-3">
-                                  <span className="text-[9px] text-gray-500 font-mono">ID: {vid.id}</span>
                                   <button
                                     onClick={() => handleDeletePremiumVideo(vid.id)}
-                                    className="p-1.5 text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 rounded-lg border border-red-500/20 transition cursor-pointer"
-                                    title="Eliminar Video del Catálogo"
+                                    className="p-2 text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 rounded-xl border border-red-500/20 transition cursor-pointer"
+                                    title="Eliminar video"
                                   >
-                                    <Trash2 size={12} />
+                                    <Trash2 size={14} />
                                   </button>
+                                </div>
+
+                                {/* Preview grid — before & after */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+                                  
+                                  {/* === BEFORE PAYMENT === */}
+                                  <div className="p-4 space-y-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                                      <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Vista del estudiante — ANTES del pago</span>
+                                    </div>
+                                    
+                                    {/* Blurred video preview */}
+                                    <div className="aspect-video bg-black rounded-2xl relative overflow-hidden">
+                                      <div className="absolute inset-0 blur-xl scale-110 opacity-30 pointer-events-none">
+                                        {(() => {
+                                          const url = vid.videoUrl || "";
+                                          const isFile = /\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(url) || url.startsWith("/uploads/");
+                                          if (isFile) return <video src={url} className="w-full h-full object-cover" />;
+                                          return <iframe src={url.includes("youtube.com/watch?v=") ? `https://www.youtube.com/embed/${url.split("v=")[1]?.split("&")[0]}` : url} className="w-full h-full" />;
+                                        })()}
+                                      </div>
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40 flex flex-col items-center justify-center gap-2 text-center p-4">
+                                        <div className="w-10 h-10 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-xl">🔒</div>
+                                        <p className="text-white font-black text-xs uppercase">Contenido Premium</p>
+                                        <div className="bg-amber-500 text-black font-black text-xs px-4 py-1.5 rounded-full">
+                                          💶 {vid.price?.toFixed(2)}€
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Hidden description */}
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-bold text-white">{vid.title}</p>
+                                      <div className="relative">
+                                        <p className="text-xs text-gray-400 blur-sm select-none pointer-events-none line-clamp-2 opacity-60">{vid.description}</p>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                          <span className="text-[9px] text-amber-400 font-bold bg-[#070a13]/80 px-2 py-0.5 rounded-full border border-amber-500/20">🔒 Visible tras el pago</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="w-full py-2.5 bg-amber-500 text-black font-black rounded-xl text-center text-xs">
+                                      💳 Desbloquear por €{vid.price?.toFixed(2)}
+                                    </div>
+                                  </div>
+
+                                  {/* === AFTER PAYMENT === */}
+                                  <div className="p-4 space-y-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Vista del estudiante — DESPUÉS del pago</span>
+                                    </div>
+                                    
+                                    {/* Real video player */}
+                                    <div className="aspect-video bg-black rounded-2xl overflow-hidden">
+                                      {(() => {
+                                        const url = vid.videoUrl || "";
+                                        const isFile = /\.(mp4|mov|webm|avi|mkv|m4v)(\?|$)/i.test(url) || url.startsWith("/uploads/");
+                                        let embedUrl = url;
+                                        if (url.includes("youtube.com/watch?v=")) embedUrl = `https://www.youtube.com/embed/${url.split("v=")[1]?.split("&")[0]}?rel=0`;
+                                        else if (url.includes("youtu.be/")) embedUrl = `https://www.youtube.com/embed/${url.split("youtu.be/")[1]?.split("?")[0]}?rel=0`;
+                                        if (isFile) return (
+                                          <video controls controlsList="nodownload" className="w-full h-full object-contain" onContextMenu={e => e.preventDefault()}>
+                                            <source src={url} />
+                                          </video>
+                                        );
+                                        return <iframe src={embedUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" allowFullScreen />;
+                                      })()}
+                                    </div>
+
+                                    {/* Full description visible */}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-bold text-white">{vid.title}</p>
+                                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg font-bold">✅ DESBLOQUEADO</span>
+                                      </div>
+                                      <p className="text-xs text-gray-400 leading-relaxed">{vid.description}</p>
+                                    </div>
+                                    {vid.pdfUrl && (
+                                      <div className="w-full py-2.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-center text-xs font-bold">
+                                        📄 Descargar Guía PDF
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
