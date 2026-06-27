@@ -8,8 +8,15 @@ import pg from "pg";
 import { getFallbackLessonData } from "./src/fallbackLessons";
 import { getFallbackExam } from "./src/fallbackExams";
 import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
+
+// Supabase Storage client
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://jzbfmztiwnorltdykmro.supabase.co";
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6YmZtenRpd25vcmx0ZHlrbXJvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjIxNTgzNywiZXhwIjoyMDk3NzkxODM3fQ.0g60e8Gx2TYF1nOTEA5U5gTUNbag3JaX6rRNEF-q9yU";
+const STORAGE_BUCKET = "ideos";
+const supabaseStorage = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -1302,6 +1309,16 @@ async function startServer() {
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: "ID del video requerido." });
       let videos = await getCustomData("premium_videos") || [];
+      
+      // Delete file from Supabase Storage if it's a storage URL
+      const vid = videos.find((v: any) => v.id === id);
+      if (vid?.videoUrl && vid.videoUrl.includes("supabase.co")) {
+        const filename = vid.videoUrl.split("/").pop();
+        if (filename) {
+          await supabaseStorage.storage.from(STORAGE_BUCKET).remove([filename]);
+        }
+      }
+
       videos = videos.filter((v: any) => v.id !== id);
       await setCustomData("premium_videos", videos);
       res.json({ success: true, videos });
@@ -1426,7 +1443,7 @@ async function startServer() {
     }
   });
 
-  // Video upload route — accepts MP4, MOV, AVI, WebM, MKV etc.
+  // Video upload route — saves to Supabase Storage
   app.post("/api/admin/upload-video", express.raw({ type: "*/*", limit: "500mb" }), async (req, res) => {
     try {
       const adminEmail = req.headers["x-admin-email"] as string;
@@ -1434,69 +1451,90 @@ async function startServer() {
 
       const contentType = req.headers["content-type"] || "";
       const boundary = contentType.split("boundary=")[1];
-
       if (!boundary) return res.status(400).json({ error: "No se recibió el archivo." });
 
       const body = req.body as Buffer;
+
+      // Extract filename
       const bodyStr = body.toString("binary");
-
-      // Extract filename from Content-Disposition
       const filenameMatch = bodyStr.match(/filename="([^"]+)"/);
-      const filename = filenameMatch ? filenameMatch[1] : `video_${Date.now()}.mp4`;
-      const cleanFilename = `${Date.now()}_${filename.replace(/\s+/g, "_")}`;
+      const originalName = filenameMatch ? filenameMatch[1] : `video_${Date.now()}.mp4`;
+      const ext = originalName.split(".").pop()?.toLowerCase() || "mp4";
+      const cleanFilename = `${Date.now()}_${originalName.replace(/\s+/g, "_")}`;
 
-      // Save to uploads directory
-      const uploadsDir = path.join(process.cwd(), "uploads", "videos");
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      // Extract file mime type
+      const mimeMatch = bodyStr.match(/Content-Type: ([^\r\n]+)/);
+      const mimeType = mimeMatch ? mimeMatch[1].trim() : "video/mp4";
 
-      // Find start of file data (after double CRLF)
-      const boundaryBuffer = Buffer.from(`--${boundary}`);
+      // Extract file bytes
       const doubleCRLF = Buffer.from("\r\n\r\n");
-      const bodyBuffer = body;
-
       let startIdx = -1;
-      for (let i = 0; i < bodyBuffer.length - doubleCRLF.length; i++) {
-        if (bodyBuffer.slice(i, i + doubleCRLF.length).equals(doubleCRLF)) {
+      for (let i = 0; i < body.length - doubleCRLF.length; i++) {
+        if (body.slice(i, i + doubleCRLF.length).equals(doubleCRLF)) {
           startIdx = i + doubleCRLF.length;
           break;
         }
       }
+      if (startIdx === -1) return res.status(400).json({ error: "Formato incorrecto." });
 
-      if (startIdx === -1) return res.status(400).json({ error: "Formato de archivo incorrecto." });
-
-      // Find end of file data (before closing boundary)
       const closingBoundary = Buffer.from(`\r\n--${boundary}--`);
-      let endIdx = bodyBuffer.length;
-      for (let i = startIdx; i < bodyBuffer.length - closingBoundary.length; i++) {
-        if (bodyBuffer.slice(i, i + closingBoundary.length).equals(closingBoundary)) {
+      let endIdx = body.length;
+      for (let i = startIdx; i < body.length - closingBoundary.length; i++) {
+        if (body.slice(i, i + closingBoundary.length).equals(closingBoundary)) {
           endIdx = i;
           break;
         }
       }
 
-      const fileBuffer = bodyBuffer.slice(startIdx, endIdx);
-      const filepath = path.join(uploadsDir, cleanFilename);
-      fs.writeFileSync(filepath, fileBuffer);
+      const fileBuffer = body.slice(startIdx, endIdx);
 
-      const url = `/uploads/videos/${cleanFilename}`;
-      res.json({ success: true, url, filename: cleanFilename });
+      // Upload to Supabase Storage
+      const { data, error } = await supabaseStorage.storage
+        .from(STORAGE_BUCKET)
+        .upload(cleanFilename, fileBuffer, {
+          contentType: mimeType,
+          upsert: true
+        });
+
+      if (error) {
+        console.error("[Supabase Storage Upload Error]", error);
+        return res.status(500).json({ error: `Error al subir: ${error.message}` });
+      }
+
+      // Get public URL
+      const { data: urlData } = supabaseStorage.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(cleanFilename);
+
+      const publicUrl = urlData.publicUrl;
+      console.log(`[Video Upload] Saved to Supabase: ${publicUrl}`);
+
+      res.json({ success: true, url: publicUrl, filename: cleanFilename });
     } catch (e: any) {
-      console.error("[Video Upload]", e);
+      console.error("[Video Upload Error]", e);
       res.status(500).json({ error: "Error al procesar el video." });
     }
   });
 
-  // Serve uploaded videos securely
-  app.get("/uploads/videos/:filename", (req, res) => {
-    const filename = req.params.filename;
-    const filepath = path.join(process.cwd(), "uploads", "videos", filename);
-    if (!fs.existsSync(filepath)) return res.status(404).json({ error: "Video no encontrado." });
-    // Anti-download headers
-    res.setHeader("Content-Disposition", "inline");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    res.sendFile(filepath);
+  // Delete video from Supabase Storage
+  app.post("/api/admin/delete-video-file", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) return res.json({ success: true });
+
+      // Extract filename from URL
+      const filename = url.split("/").pop();
+      if (!filename) return res.json({ success: true });
+
+      const { error } = await supabaseStorage.storage
+        .from(STORAGE_BUCKET)
+        .remove([filename]);
+
+      if (error) console.error("[Storage Delete Error]", error);
+      res.json({ success: true });
+    } catch (e) {
+      res.json({ success: true }); // Non-blocking
+    }
   });
 
   // Save video popup announcement

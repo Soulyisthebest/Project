@@ -7,10 +7,22 @@
     "build": "echo done"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
-    "pg": "^8.11.3",
-    "stripe": "^14.0.0"
+    "@google/genai": "^2.10.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.21.0",
+    "motion": "^12.42.0",
+    "pg": "^8.22.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "stripe": "^14.25.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.1",
+    "@vitejs/plugin-react": "^6.0.3",
+    "tailwindcss": "^4.3.1"
   }
 }
