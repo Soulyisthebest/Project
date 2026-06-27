@@ -626,6 +626,7 @@ async function startServer() {
       const subscriptionUserLimit = await getConfig("subscriptionUserLimit");
       const subscriptionEnabled = await getConfig("subscriptionEnabled");
       const videoPopup = await getConfig("videoPopup");
+      const announcements = await getConfig("announcements") || [];
 
       const verifyEmail = req.query.verifyEmail as string;
       if (verifyEmail) {
@@ -637,7 +638,7 @@ async function startServer() {
         if (!existingIP) activeSessions.set(verifyEmail.toLowerCase(), clientIP);
       }
 
-      res.json({ students, communityMessages, alerts, teachers, admins, ads, progressReports, customMetrics, subscriptionPrice, subscriptionScope, subscriptionBlocked, subscriptionUserLimit, subscriptionEnabled, premiumVideos, videoPopup });
+      res.json({ students, communityMessages, alerts, teachers, admins, ads, progressReports, customMetrics, subscriptionPrice, subscriptionScope, subscriptionBlocked, subscriptionUserLimit, subscriptionEnabled, premiumVideos, videoPopup, announcements });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: "DB error" });
@@ -1538,30 +1539,103 @@ async function startServer() {
   });
 
   // Save video popup announcement
+  // Save new announcement (adds to list)
   app.post("/api/admin/video-popup/save", async (req, res) => {
     try {
-      const { titleEs, titleFr, titleAr, titleEn, link, active, maxShows } = req.body;
-      await setConfig("videoPopup", { titleEs, titleFr, titleAr, titleEn, link, active: !!active, maxShows: maxShows || 3 });
+      const { id, titleEs, titleFr, titleAr, titleEn, link, active, maxShows, durationDays } = req.body;
+      const announcements = await getConfig("announcements") || [];
+
+      if (id) {
+        // Update existing
+        const idx = announcements.findIndex((a: any) => a.id === id);
+        if (idx !== -1) {
+          announcements[idx] = { ...announcements[idx], titleEs, titleFr, titleAr, titleEn, link, active: !!active, maxShows: maxShows || 3, durationDays: durationDays || 7, updatedAt: new Date().toISOString() };
+        }
+      } else {
+        // Create new
+        const newId = `ann_${Date.now()}`;
+        announcements.unshift({ id: newId, titleEs, titleFr, titleAr, titleEn, link, active: !!active, maxShows: maxShows || 3, durationDays: durationDays || 7, createdAt: new Date().toISOString(), stats: { views: 0, clicks: 0, history: [] } });
+      }
+
+      await setConfig("announcements", announcements);
+
+      // Also update the active videoPopup for students (use first active announcement)
+      const firstActive = announcements.find((a: any) => a.active);
+      if (firstActive) {
+        await setConfig("videoPopup", { titleEs: firstActive.titleEs, titleFr: firstActive.titleFr, titleAr: firstActive.titleAr, titleEn: firstActive.titleEn, link: firstActive.link, active: true, maxShows: firstActive.maxShows, durationDays: firstActive.durationDays, annId: firstActive.id });
+      } else {
+        await setConfig("videoPopup", { active: false });
+      }
+
+      res.json({ success: true, announcements });
+    } catch (e) { res.status(500).json({ error: "Error." }); }
+  });
+
+  // Toggle announcement active/inactive
+  app.post("/api/admin/announcement/toggle", async (req, res) => {
+    try {
+      const { id, active } = req.body;
+      const announcements = await getConfig("announcements") || [];
+      const idx = announcements.findIndex((a: any) => a.id === id);
+      if (idx !== -1) announcements[idx].active = !!active;
+      await setConfig("announcements", announcements);
+      const firstActive = announcements.find((a: any) => a.active);
+      if (firstActive) {
+        await setConfig("videoPopup", { titleEs: firstActive.titleEs, titleFr: firstActive.titleFr, titleAr: firstActive.titleAr, titleEn: firstActive.titleEn, link: firstActive.link, active: true, maxShows: firstActive.maxShows, durationDays: firstActive.durationDays, annId: firstActive.id });
+      } else {
+        await setConfig("videoPopup", { active: false });
+      }
       res.json({ success: true });
     } catch (e) { res.status(500).json({ error: "Error." }); }
   });
 
-  // Track popup views and clicks
+  // Delete announcement
+  app.post("/api/admin/announcement/delete", async (req, res) => {
+    try {
+      const { id } = req.body;
+      let announcements = await getConfig("announcements") || [];
+      announcements = announcements.filter((a: any) => a.id !== id);
+      await setConfig("announcements", announcements);
+      res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: "Error." }); }
+  });
+
+  // Get all announcements
+  app.get("/api/admin/announcements", async (req, res) => {
+    try {
+      const announcements = await getConfig("announcements") || [];
+      res.json({ announcements });
+    } catch (e) { res.json({ announcements: [] }); }
+  });
+
+  // Track popup views and clicks — per announcement
   app.post("/api/popup/track", async (req, res) => {
     try {
-      const { type, popupTitle, studentEmail } = req.body;
+      const { type, popupTitle, studentEmail, annId } = req.body;
+      const now = new Date();
+      const entry = { type, date: now.toISOString().split("T")[0], time: now.toTimeString().slice(0,5), title: popupTitle, studentEmail: studentEmail || "Anónimo" };
+
+      // Update per-announcement stats
+      if (annId) {
+        const announcements = await getConfig("announcements") || [];
+        const idx = announcements.findIndex((a: any) => a.id === annId);
+        if (idx !== -1) {
+          announcements[idx].stats = announcements[idx].stats || { views: 0, clicks: 0, history: [] };
+          if (type === "view") announcements[idx].stats.views = (announcements[idx].stats.views || 0) + 1;
+          if (type === "click") announcements[idx].stats.clicks = (announcements[idx].stats.clicks || 0) + 1;
+          announcements[idx].stats.history = announcements[idx].stats.history || [];
+          announcements[idx].stats.history.unshift(entry);
+          if (announcements[idx].stats.history.length > 10000) announcements[idx].stats.history = announcements[idx].stats.history.slice(0, 10000);
+          await setConfig("announcements", announcements);
+        }
+      }
+
+      // Also update global stats
       const stats = await getConfig("popupStats") || { views: 0, clicks: 0, history: [] };
       if (type === "view") stats.views = (stats.views || 0) + 1;
       if (type === "click") stats.clicks = (stats.clicks || 0) + 1;
       stats.history = stats.history || [];
-      const now = new Date();
-      stats.history.unshift({ 
-        type, 
-        date: now.toISOString().split("T")[0], 
-        time: now.toTimeString().slice(0,5),
-        title: popupTitle,
-        studentEmail: studentEmail || "Anónimo"
-      });
+      stats.history.unshift(entry);
       if (stats.history.length > 10000) stats.history = stats.history.slice(0, 10000);
       await setConfig("popupStats", stats);
       res.json({ success: true });
