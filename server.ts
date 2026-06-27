@@ -1546,6 +1546,29 @@ async function startServer() {
     } catch (e) { res.status(500).json({ error: "Error." }); }
   });
 
+  // Track popup views and clicks
+  app.post("/api/popup/track", async (req, res) => {
+    try {
+      const { type, popupTitle } = req.body;
+      const stats = await getConfig("popupStats") || { views: 0, clicks: 0, history: [] };
+      if (type === "view") stats.views = (stats.views || 0) + 1;
+      if (type === "click") stats.clicks = (stats.clicks || 0) + 1;
+      stats.history = stats.history || [];
+      stats.history.unshift({ type, date: new Date().toISOString().split("T")[0], title: popupTitle });
+      if (stats.history.length > 100) stats.history = stats.history.slice(0, 100);
+      await setConfig("popupStats", stats);
+      res.json({ success: true });
+    } catch (e) { res.json({ success: true }); }
+  });
+
+  // Get popup stats (admin)
+  app.get("/api/popup/stats", async (req, res) => {
+    try {
+      const stats = await getConfig("popupStats") || { views: 0, clicks: 0, history: [] };
+      res.json(stats);
+    } catch (e) { res.json({ views: 0, clicks: 0, history: [] }); }
+  });
+
   // =============================================
   // CONSULTATION BOOKING ROUTES
   // =============================================

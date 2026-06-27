@@ -177,37 +177,118 @@ const renderVideoEmbed = (url: string, title?: string) => {
 };
 
 // Top banner notification — stays on all pages until dismissed
-const VideoBanner = ({ popup, lang, onClose }: { popup: any, lang: string, onClose: () => void }) => {
+const VideoBanner = ({ popup, lang, onClose, onTrackView, onTrackClick }: { 
+  popup: any, lang: string, onClose: () => void,
+  onTrackView?: () => void, onTrackClick?: () => void
+}) => {
+  const [visible, setVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!popup?.active) return;
+    // Animate in
+    setTimeout(() => setVisible(true), 100);
+    // Track view
+    onTrackView?.();
+    // Play notification sound
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {}
+  }, []);
+
   if (!popup?.active) return null;
   const title = lang === "ar" ? popup.titleAr : lang === "fr" ? popup.titleFr : lang === "es" ? popup.titleEs : popup.titleEn;
   if (!title) return null;
+
+  const handleCTA = () => {
+    onTrackClick?.();
+    if (popup.link === "videos" || !popup.link) {
+      (window as any).__navigateToTab?.("videos");
+    } else if (popup.link.startsWith("http")) {
+      window.open(popup.link, "_blank");
+    } else {
+      (window as any).__navigateToTab?.(popup.link);
+    }
+    onClose();
+  };
+
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 shadow-lg shadow-amber-500/30">
-      <div className="flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className="text-lg shrink-0">🎬</span>
-          <p className="text-black font-black text-xs truncate">{title}</p>
+    <div className={`fixed inset-0 z-[999] flex items-center justify-center p-4 transition-all duration-500 ${visible ? "opacity-100" : "opacity-0"}`}
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
+      
+      {/* Modal */}
+      <div className={`relative bg-[#0b1222] border-2 border-amber-500/50 rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl shadow-amber-500/20 transition-all duration-500 ${visible ? "scale-100 translate-y-0" : "scale-95 translate-y-4"}`}>
+        
+        {/* Top gradient bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 animate-pulse" />
+
+        {/* Close button */}
+        <button onClick={onClose} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition text-sm font-bold">✕</button>
+
+        {/* Content */}
+        <div className="p-8 space-y-6">
+          {/* Badge */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest font-mono">
+                {lang === "ar" ? "🎬 فيديو جديد" : lang === "fr" ? "🎬 Nouveau Vídeo" : "🎬 Nuevo Vídeo Disponible"}
+              </span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-white leading-tight">{title}</h2>
+            <p className="text-sm text-gray-400">
+              {lang === "ar" ? "محتوى حصري — انقر لاكتشافه" : lang === "fr" ? "Contenu exclusif — Cliquez pour découvrir" : "Contenido exclusivo — Haz clic para descubrirlo"}
+            </p>
+          </div>
+
+          {/* Visual */}
+          <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-2xl p-6 flex items-center justify-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center text-4xl animate-pulse">🎬</div>
+            <div className="text-left">
+              <p className="text-white font-black text-sm">
+                {lang === "ar" ? "متاح الآن" : lang === "fr" ? "Disponible maintenant" : "Disponible ahora"}
+              </p>
+              <p className="text-amber-400 text-xs font-bold">
+                {lang === "ar" ? "💳 تحتاج إلى الدفع للمشاهدة" : lang === "fr" ? "💳 Paiement requis pour voir" : "💳 Requiere pago para ver"}
+              </p>
+            </div>
+          </div>
+
+          {/* CTA buttons */}
+          <div className="flex gap-3">
+            <button onClick={onClose}
+              className="flex-1 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-2xl text-sm transition">
+              {lang === "ar" ? "لاحقاً" : lang === "fr" ? "Plus tard" : "Más tarde"}
+            </button>
+            <button onClick={handleCTA}
+              className="flex-[2] py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black rounded-2xl text-sm transition shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2">
+              <span>🎬</span>
+              <span>{lang === "ar" ? "اكتشف الآن" : lang === "fr" ? "Découvrir maintenant" : "Ver ahora"}</span>
+              <span>→</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {popup.link && (
-            <a href={popup.link === "videos" ? "#" : popup.link}
-              onClick={(e) => {
-                if (popup.link === "videos") {
-                  e.preventDefault();
-                  (window as any).__navigateToTab?.("videos");
-                }
-                onClose();
-              }}
-              target={popup.link.startsWith("http") ? "_blank" : "_self"}
-              rel="noreferrer"
-              className="px-3 py-1.5 bg-black/20 hover:bg-black/40 text-black font-black text-xs rounded-xl transition whitespace-nowrap">
-              {lang === "ar" ? "اكتشف ←" : lang === "fr" ? "Voir →" : "Ver ahora →"}
-            </a>
-          )}
-          <button onClick={onClose}
-            className="w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 text-black font-black text-sm flex items-center justify-center transition">
-            ✕
-          </button>
+
+        {/* Bottom bar */}
+        <div className="px-8 py-3 bg-gray-900/50 border-t border-gray-800 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-[10px] text-gray-500">
+            {lang === "ar" ? "محتوى حصري من R-Consulting" : lang === "fr" ? "Contenu exclusif R-Consulting" : "Contenido exclusivo de R-Consulting"}
+          </span>
         </div>
       </div>
     </div>
@@ -2152,7 +2233,7 @@ export default function App() {
 
   if (userRole === "admin") {
     return (
-      <div className={`min-h-screen bg-[#070a13] text-gray-200 flex flex-col font-sans select-none antialiased ${showVideoPopup ? "pt-10" : ""}`}>
+      <div className="min-h-screen bg-[#070a13] text-gray-200 flex flex-col font-sans select-none antialiased">
         <header className="bg-[#0c1222] border-b border-[#1b253b] p-4 flex items-center justify-between flex-wrap gap-4 shadow-lg shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-amber-500 text-[#070a13] w-10 h-10 rounded-xl flex items-center justify-center font-black text-2xl shadow-md font-sans">
@@ -6071,6 +6152,24 @@ export default function App() {
           popup={dbStats?.videoPopup}
           lang={lang}
           onClose={() => setShowVideoPopup(false)}
+          onTrackView={async () => {
+            try {
+              await fetch("/api/popup/track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "view", popupTitle: dbStats?.videoPopup?.titleEs })
+              });
+            } catch (e) {}
+          }}
+          onTrackClick={async () => {
+            try {
+              await fetch("/api/popup/track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "click", popupTitle: dbStats?.videoPopup?.titleEs })
+              });
+            } catch (e) {}
+          }}
         />
       )}
     </div>

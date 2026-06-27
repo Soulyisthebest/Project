@@ -405,12 +405,53 @@ function VideosPanelAdmin({ dbStats, onRefreshStats, vidTitle, setVidTitle, vidD
       {adminVidTab === "popup" && (
         <div className="bg-[#0b1222] border border-amber-500/20 rounded-3xl p-6 space-y-5 max-w-2xl">
           <div className="flex items-center justify-between">
-            <div><h4 className="text-sm font-black text-amber-400 uppercase">📢 Anuncio Emergente</h4><p className="text-[10px] text-gray-500 mt-0.5">Aparece al estudiante al entrar</p></div>
+            <div><h4 className="text-sm font-black text-amber-400 uppercase">📢 Anuncio Emergente</h4><p className="text-[10px] text-gray-500 mt-0.5">Aparece al estudiante al entrar con sonido y pantalla completa</p></div>
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPopupActive(!popupActive)}>
               <span className="text-xs text-gray-400">{popupActive ? "🟢 Activo" : "⚫ Inactivo"}</span>
               <div className={`w-10 h-5 rounded-full relative transition-all ${popupActive ? "bg-amber-500" : "bg-gray-700"}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${popupActive ? "left-5" : "left-0.5"}`} /></div>
             </div>
           </div>
+
+          {/* KPIs */}
+          {(() => {
+            const [kpis, setKpis] = React.useState<any>(null);
+            React.useEffect(() => {
+              fetch("/api/popup/stats").then(r => r.json()).then(setKpis).catch(() => {});
+            }, []);
+            const ctr = kpis?.views > 0 ? ((kpis.clicks / kpis.views) * 100).toFixed(1) : "0.0";
+            const todayViews = kpis?.history?.filter((h: any) => h.date === new Date().toISOString().split("T")[0] && h.type === "view").length || 0;
+            const todayClicks = kpis?.history?.filter((h: any) => h.date === new Date().toISOString().split("T")[0] && h.type === "click").length || 0;
+            return (
+              <div className="bg-[#040710] border border-[#1c2e4f] rounded-2xl p-4 space-y-3">
+                <p className="text-[10px] text-amber-400 font-bold uppercase font-mono">📊 KPIs del Anuncio</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: "Total Vistas", value: kpis?.views || 0, icon: "👁️", color: "blue" },
+                    { label: "Total Clics", value: kpis?.clicks || 0, icon: "👆", color: "green" },
+                    { label: "CTR", value: `${ctr}%`, icon: "📈", color: "amber" },
+                    { label: "Hoy", value: `${todayViews}v · ${todayClicks}c`, icon: "📅", color: "purple" },
+                  ].map((kpi, i) => (
+                    <div key={i} className="bg-[#0b1222] border border-[#1c2e4f] rounded-xl p-3 text-center">
+                      <div className="text-lg mb-1">{kpi.icon}</div>
+                      <div className="text-lg font-black text-white">{kpi.value}</div>
+                      <div className="text-[9px] text-gray-500 mt-0.5">{kpi.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {kpis?.history?.length > 0 && (
+                  <div className="space-y-1 max-h-28 overflow-y-auto">
+                    <p className="text-[9px] text-gray-600 uppercase font-mono">Historial reciente:</p>
+                    {kpis.history.slice(0, 10).map((h: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between text-[9px] px-2 py-1 bg-[#0b1222] rounded-lg">
+                        <span className={h.type === "click" ? "text-green-400 font-bold" : "text-blue-400"}>{h.type === "click" ? "👆 Clic" : "👁️ Vista"}</span>
+                        <span className="text-gray-500">{h.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-1 gap-3">
 
             {/* Selector de vídeos del catálogo */}
